@@ -41,6 +41,8 @@ export function LockScreen({ onUnlock, isUnlocking = false }: LockScreenProps) {
 
   const getMaxSlide = () => {
     if (!slideBarRef.current || !buttonRef.current) return 0;
+    // Use original dimensions since slidePosition is in original coordinate space
+    // (translateX gets scaled by CSS transform, so we work in original space)
     return slideBarRef.current.offsetWidth - buttonRef.current.offsetWidth - 20; // 20px for padding
   };
 
@@ -48,7 +50,7 @@ export function LockScreen({ onUnlock, isUnlocking = false }: LockScreenProps) {
     setIsDragging(true);
     if (slideBarRef.current) {
       const rect = slideBarRef.current.getBoundingClientRect();
-      // Calculate mouse position relative to the slide bar
+      // Calculate mouse position relative to the slide bar in rendered space
       const relativeX = e.clientX - rect.left;
       setStartX(relativeX);
       setStartPosition(slidePosition);
@@ -60,7 +62,7 @@ export function LockScreen({ onUnlock, isUnlocking = false }: LockScreenProps) {
     setIsDragging(true);
     if (slideBarRef.current) {
       const rect = slideBarRef.current.getBoundingClientRect();
-      // Calculate touch position relative to the slide bar
+      // Calculate touch position relative to the slide bar in rendered space
       const relativeX = e.touches[0].clientX - rect.left;
       setStartX(relativeX);
       setStartPosition(slidePosition);
@@ -71,12 +73,16 @@ export function LockScreen({ onUnlock, isUnlocking = false }: LockScreenProps) {
   const handleMove = (clientX: number) => {
     if (!isDragging || !slideBarRef.current) return;
     const rect = slideBarRef.current.getBoundingClientRect();
-    // Calculate mouse position relative to the slide bar
+    // Calculate mouse position relative to the slide bar in rendered space
     const relativeX = clientX - rect.left;
-    // Calculate delta in slide bar coordinates (1:1 ratio)
-    const delta = relativeX - startX;
+    // Calculate delta in rendered pixels
+    const deltaRendered = relativeX - startX;
+    // Convert delta from rendered space to original space
+    // Since translateX is also scaled, we need to scale the delta inversely
+    const scale = slideBarRef.current.offsetWidth / rect.width;
+    const deltaOriginal = deltaRendered * scale;
     const maxSlide = getMaxSlide();
-    const newPosition = Math.max(0, Math.min(maxSlide, startPosition + delta));
+    const newPosition = Math.max(0, Math.min(maxSlide, startPosition + deltaOriginal));
     setSlidePosition(newPosition);
   };
 
