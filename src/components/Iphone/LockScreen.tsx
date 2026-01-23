@@ -46,21 +46,35 @@ export function LockScreen({ onUnlock, isUnlocking = false }: LockScreenProps) {
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
-    setStartX(e.clientX);
-    setStartPosition(slidePosition);
+    if (slideBarRef.current) {
+      const rect = slideBarRef.current.getBoundingClientRect();
+      // Calculate mouse position relative to the slide bar
+      const relativeX = e.clientX - rect.left;
+      setStartX(relativeX);
+      setStartPosition(slidePosition);
+    }
     e.preventDefault();
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsDragging(true);
-    setStartX(e.touches[0].clientX);
-    setStartPosition(slidePosition);
+    if (slideBarRef.current) {
+      const rect = slideBarRef.current.getBoundingClientRect();
+      // Calculate touch position relative to the slide bar
+      const relativeX = e.touches[0].clientX - rect.left;
+      setStartX(relativeX);
+      setStartPosition(slidePosition);
+    }
     e.preventDefault();
   };
 
   const handleMove = (clientX: number) => {
     if (!isDragging || !slideBarRef.current) return;
-    const delta = clientX - startX;
+    const rect = slideBarRef.current.getBoundingClientRect();
+    // Calculate mouse position relative to the slide bar
+    const relativeX = clientX - rect.left;
+    // Calculate delta in slide bar coordinates (1:1 ratio)
+    const delta = relativeX - startX;
     const maxSlide = getMaxSlide();
     const newPosition = Math.max(0, Math.min(maxSlide, startPosition + delta));
     setSlidePosition(newPosition);

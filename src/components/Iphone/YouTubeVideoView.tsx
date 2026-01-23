@@ -10,7 +10,9 @@ export function YouTubeVideoView({ video, onBack }: YouTubeVideoViewProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Extract video ID from URL
   const getVideoId = (url: string): string | null => {
@@ -24,6 +26,10 @@ export function YouTubeVideoView({ video, onBack }: YouTubeVideoViewProps) {
     : '';
 
   useEffect(() => {
+    // Reset time when video changes
+    setCurrentTime(0);
+    setDuration(0);
+    
     if (videoId && videoRef.current) {
       setIsPlaying(true);
     }
@@ -36,7 +42,20 @@ export function YouTubeVideoView({ video, onBack }: YouTubeVideoViewProps) {
         const data = JSON.parse(event.data);
         if (data.event === 'onStateChange') {
           // 0 = ended, 1 = playing, 2 = paused, 3 = buffering, 5 = cued
-          setIsPlaying(data.info === 1);
+          const newIsPlaying = data.info === 1;
+          setIsPlaying(newIsPlaying);
+          
+          // If video ended, stop incrementing time
+          if (data.info === 0) {
+            const estimatedDuration = (() => {
+              const parts = video.duration.split(':');
+              if (parts.length === 2) {
+                return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+              }
+              return 180;
+            })();
+            setCurrentTime(estimatedDuration);
+          }
         } else if (data.event === 'onReady') {
           setIsPlaying(true);
         }
@@ -47,7 +66,30 @@ export function YouTubeVideoView({ video, onBack }: YouTubeVideoViewProps) {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [videoId]);
+  }, [videoId, video.duration]);
+
+  // Update current time while video is playing
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const interval = setInterval(() => {
+      setCurrentTime((prevTime) => {
+        const estimatedDuration = duration || (() => {
+          const parts = video.duration.split(':');
+          if (parts.length === 2) {
+            return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+          }
+          return 180;
+        })();
+        
+        // Increment time, but don't exceed duration
+        const newTime = prevTime + 0.1;
+        return Math.min(newTime, estimatedDuration);
+      });
+    }, 100); // Update every 100ms for smooth progress
+
+    return () => clearInterval(interval);
+  }, [isPlaying, duration, video.duration]);
 
   const handlePlayPause = () => {
     if (videoRef.current && videoRef.current.contentWindow) {
@@ -71,6 +113,73 @@ export function YouTubeVideoView({ video, onBack }: YouTubeVideoViewProps) {
   const handleNext = () => {
     // TODO: Implement next video
   };
+
+  const handleFullscreen = async () => {
+    if (!containerRef.current) return;
+
+    try {
+      const element = containerRef.current;
+      const isFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+
+      if (!isFullscreen) {
+        // Enter fullscreen
+        if (element.requestFullscreen) {
+          await element.requestFullscreen();
+        } else if ((element as any).webkitRequestFullscreen) {
+          await (element as any).webkitRequestFullscreen();
+        } else if ((element as any).mozRequestFullScreen) {
+          await (element as any).mozRequestFullScreen();
+        } else if ((element as any).msRequestFullscreen) {
+          await (element as any).msRequestFullscreen();
+        }
+        setIsFullscreen(true);
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).mozCancelFullScreen) {
+          await (document as any).mozCancelFullScreen();
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen();
+        }
+        setIsFullscreen(false);
+      }
+    } catch (error) {
+      console.error('Error toggling fullscreen:', error);
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isFullscreen);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
 
   const handleScrub = (e: React.MouseEvent<HTMLDivElement>) => {
     const scrubber = e.currentTarget;
@@ -110,10 +219,12 @@ export function YouTubeVideoView({ video, onBack }: YouTubeVideoViewProps) {
     return 180; // Default to 3 minutes
   })();
   
-  const progressPercentage = estimatedDuration > 0 ? (currentTime / estimatedDuration) * 100 : 0;
+  const progressPercentage = estimatedDuration > 0 
+    ? Math.max(0, Math.min(100, (currentTime / estimatedDuration) * 100))
+    : 0;
 
   return (
-    <div className="iphone-youtube-video-view">
+    <div className="iphone-youtube-video-view" ref={containerRef}>
       {/* Video Player */}
       <div className="iphone-youtube-video-player-container">
         <iframe
@@ -143,6 +254,25 @@ export function YouTubeVideoView({ video, onBack }: YouTubeVideoViewProps) {
               ) : (
                 <svg width="96" height="96" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M6 6v12l14-6z" />
+                </svg>
+              )}
+            </button>
+            
+            {/* Fullscreen Button */}
+            <button 
+              className="iphone-youtube-video-control-button iphone-youtube-video-control-button-fullscreen"
+              onClick={handleFullscreen}
+              title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              {isFullscreen ? (
+                // Exit fullscreen icon (square with arrows pointing inward)
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+                </svg>
+              ) : (
+                // Enter fullscreen icon (square with arrows pointing outward)
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
                 </svg>
               )}
             </button>

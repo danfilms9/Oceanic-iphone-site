@@ -1,3 +1,4 @@
+// This is a Vercel serverless function that fetches YouTube videos from Notion
 import { Client } from '@notionhq/client';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 

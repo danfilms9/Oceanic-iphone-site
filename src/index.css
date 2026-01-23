@@ -10,6 +10,24 @@ html, body, #root {
   overflow-x: hidden;
 }
 
+/* Mobile: Prevent page scrolling and use dynamic viewport height */
+@media (max-width: 768px) {
+  html, body {
+    height: 100dvh;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    left: 0;
+    top: 0;
+  }
+  
+  #root {
+    height: 100dvh;
+    overflow: hidden;
+    width: 100%;
+  }
+}
+
 body {
   font-family: Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;

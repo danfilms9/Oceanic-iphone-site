@@ -234,7 +234,9 @@ export function YoutubePlaceholder() {
                   <div className="iphone-notes-loading-spinner"></div>
                 </div>
               ) : filteredVideos.length === 0 ? (
-                <div className="iphone-youtube-empty">No videos found</div>
+                <div className={`iphone-youtube-empty ${currentTab === 'search' || currentTab === 'more' ? 'iphone-youtube-empty-with-margin' : ''}`}>
+                  No videos found
+                </div>
               ) : (
                 filteredVideos.map((video) => (
                   <div key={video.id} onClick={() => handleVideoSelect(video)}>

@@ -28,3 +28,4 @@ server-example/.env
 *.njsproj
 *.sln
 *.sw?
+.vercel

@@ -14,6 +14,15 @@
   overflow: hidden;
 }
 
+/* Mobile: Use dynamic viewport height and ensure no scrolling */
+@media (max-width: 768px) {
+  .iphone-page {
+    height: 100dvh;
+    min-height: 100dvh;
+    padding: 0;
+  }
+}
+
 /* Wrapper sized to scaled frame so it always fits in the viewport */
 .iphone-frame-wrapper {
   position: relative;
@@ -1408,6 +1417,23 @@ body:has(.iphone-wallpaper-preview) {
   font-size: 16px;
 }
 
+/* Add margin above "No videos found" text for search and more tabs */
+.iphone-youtube-empty.iphone-youtube-empty-with-margin {
+  margin-top: 40px;
+  padding-top: 0;
+}
+
+/* YouTube Loading Spinner - Centered with margin from top */
+.iphone-youtube-content-inner .iphone-notes-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 200px;
+  margin-top: 40px;
+  padding: 0;
+}
+
 /* YouTube Bottom Navigation Bar */
 .iphone-youtube-bottom-bar {
   position: absolute;
@@ -1628,6 +1654,33 @@ body:has(.iphone-wallpaper-preview) {
   left: 0;
 }
 
+/* Fullscreen styles */
+.iphone-youtube-video-view:fullscreen,
+.iphone-youtube-video-view:-webkit-full-screen,
+.iphone-youtube-video-view:-moz-full-screen,
+.iphone-youtube-video-view:-ms-fullscreen {
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  padding: 0;
+}
+
+.iphone-youtube-video-view:fullscreen .iphone-youtube-video-player-container,
+.iphone-youtube-video-view:-webkit-full-screen .iphone-youtube-video-player-container,
+.iphone-youtube-video-view:-moz-full-screen .iphone-youtube-video-player-container,
+.iphone-youtube-video-view:-ms-fullscreen .iphone-youtube-video-player-container {
+  width: 100%;
+  height: 100%;
+  max-height: 100vh;
+}
+
+.iphone-youtube-video-view:fullscreen .iphone-youtube-video-controls,
+.iphone-youtube-video-view:-webkit-full-screen .iphone-youtube-video-controls,
+.iphone-youtube-video-view:-moz-full-screen .iphone-youtube-video-controls,
+.iphone-youtube-video-view:-ms-fullscreen .iphone-youtube-video-controls {
+  bottom: 20px;
+}
+
 /* Custom Video Controls */
 .iphone-youtube-video-controls {
   position: absolute;
@@ -1711,6 +1764,13 @@ body:has(.iphone-wallpaper-preview) {
   width: 64px;
   height: 64px;
   margin-top: -10px;
+}
+
+.iphone-youtube-video-control-button-fullscreen {
+  color: #999;
+  width: 48px;
+  height: 48px;
+  margin-top: 0;
 }
 
 .iphone-youtube-video-control-button svg {
