@@ -8,6 +8,10 @@ html, body, #root {
   width: 100%;
   min-height: 100%;
   overflow-x: hidden;
+  /* Disable pull-to-refresh on mobile */
+  overscroll-behavior-y: contain;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Mobile: Prevent page scrolling and use dynamic viewport height */
@@ -19,12 +23,19 @@ html, body, #root {
     width: 100%;
     left: 0;
     top: 0;
+    /* Disable pull-to-refresh on mobile */
+    overscroll-behavior-y: none;
+    overscroll-behavior: none;
+    touch-action: pan-y;
   }
   
   #root {
     height: 100dvh;
     overflow: hidden;
     width: 100%;
+    /* Disable pull-to-refresh on mobile */
+    overscroll-behavior-y: none;
+    overscroll-behavior: none;
   }
 }
 

@@ -22,6 +22,27 @@ window.addEventListener('error', (event) => {
   // Don't prevent default for all errors, but log them
 });
 
+// Disable pull-to-refresh on mobile
+// Prevent touchmove when at the top of the page to avoid accidental refresh
+let touchStartY = 0;
+let touchStartX = 0;
+
+document.addEventListener('touchstart', (e) => {
+  touchStartY = e.touches[0].clientY;
+  touchStartX = e.touches[0].clientX;
+}, { passive: true });
+
+document.addEventListener('touchmove', (e) => {
+  const touchY = e.touches[0].clientY;
+  const touchX = e.touches[0].clientX;
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  
+  // If we're at the top of the page and user is trying to scroll down, prevent it
+  if (scrollTop === 0 && touchY > touchStartY && Math.abs(touchY - touchStartY) > Math.abs(touchX - touchStartX)) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
