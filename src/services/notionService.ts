@@ -53,28 +53,31 @@ export async function fetchEventsFromNotion(): Promise<CalendarEvent[]> {
         
         // Handle Venue - could be rich_text or title
         let venueName = '';
-        if (properties['Venue']?.rich_text?.[0]?.plain_text) {
-          venueName = properties['Venue'].rich_text[0].plain_text;
-        } else if (properties['Venue']?.title?.[0]?.plain_text) {
-          venueName = properties['Venue'].title[0].plain_text;
+        const venue = properties['Venue'];
+        if (venue && 'rich_text' in venue && venue.rich_text?.[0]?.plain_text) {
+          venueName = venue.rich_text[0].plain_text;
+        } else if (venue && 'title' in venue && venue.title?.[0]?.plain_text) {
+          venueName = venue.title[0].plain_text;
         }
         
         const dateStr = properties['Date']?.date?.start;
         
         // Handle City - could be rich_text or select
         let city = '';
-        if (properties['City']?.rich_text?.[0]?.plain_text) {
-          city = properties['City'].rich_text[0].plain_text;
-        } else if (properties['City']?.select?.name) {
-          city = properties['City'].select.name;
+        const cityProp = properties['City'];
+        if (cityProp && 'rich_text' in cityProp && cityProp.rich_text?.[0]?.plain_text) {
+          city = cityProp.rich_text[0].plain_text;
+        } else if (cityProp && 'select' in cityProp && cityProp.select?.name) {
+          city = cityProp.select.name;
         }
         
         // Handle State - could be rich_text or select
         let state = '';
-        if (properties['State']?.rich_text?.[0]?.plain_text) {
-          state = properties['State'].rich_text[0].plain_text;
-        } else if (properties['State']?.select?.name) {
-          state = properties['State'].select.name;
+        const stateProp = properties['State'];
+        if (stateProp && 'rich_text' in stateProp && stateProp.rich_text?.[0]?.plain_text) {
+          state = stateProp.rich_text[0].plain_text;
+        } else if (stateProp && 'select' in stateProp && stateProp.select?.name) {
+          state = stateProp.select.name;
         }
         
         const ticketLink = properties['Ticket Link']?.url || '';
@@ -141,28 +144,31 @@ export async function fetchEventsFromNotionDirect(apiKey: string, databaseId: st
         
         // Handle Venue - could be rich_text or title
         let venueName = '';
-        if (properties['Venue']?.rich_text?.[0]?.plain_text) {
-          venueName = properties['Venue'].rich_text[0].plain_text;
-        } else if (properties['Venue']?.title?.[0]?.plain_text) {
-          venueName = properties['Venue'].title[0].plain_text;
+        const venue = properties['Venue'];
+        if (venue && 'rich_text' in venue && venue.rich_text?.[0]?.plain_text) {
+          venueName = venue.rich_text[0].plain_text;
+        } else if (venue && 'title' in venue && venue.title?.[0]?.plain_text) {
+          venueName = venue.title[0].plain_text;
         }
         
         const dateStr = properties['Date']?.date?.start;
         
         // Handle City - could be rich_text or select
         let city = '';
-        if (properties['City']?.rich_text?.[0]?.plain_text) {
-          city = properties['City'].rich_text[0].plain_text;
-        } else if (properties['City']?.select?.name) {
-          city = properties['City'].select.name;
+        const cityProp = properties['City'];
+        if (cityProp && 'rich_text' in cityProp && cityProp.rich_text?.[0]?.plain_text) {
+          city = cityProp.rich_text[0].plain_text;
+        } else if (cityProp && 'select' in cityProp && cityProp.select?.name) {
+          city = cityProp.select.name;
         }
         
         // Handle State - could be rich_text or select
         let state = '';
-        if (properties['State']?.rich_text?.[0]?.plain_text) {
-          state = properties['State'].rich_text[0].plain_text;
-        } else if (properties['State']?.select?.name) {
-          state = properties['State'].select.name;
+        const stateProp = properties['State'];
+        if (stateProp && 'rich_text' in stateProp && stateProp.rich_text?.[0]?.plain_text) {
+          state = stateProp.rich_text[0].plain_text;
+        } else if (stateProp && 'select' in stateProp && stateProp.select?.name) {
+          state = stateProp.select.name;
         }
         
         const ticketLink = properties['Ticket Link']?.url || '';
@@ -219,10 +225,11 @@ export async function fetchNotesFromNotion(): Promise<Note[]> {
         
         // Handle Content - could be rich_text or title
         let content = '';
-        if (properties['Content']?.rich_text?.[0]?.plain_text) {
-          content = properties['Content'].rich_text[0].plain_text;
-        } else if (properties['Content']?.title?.[0]?.plain_text) {
-          content = properties['Content'].title[0].plain_text;
+        const contentProp = properties['Content'];
+        if (contentProp && 'rich_text' in contentProp && contentProp.rich_text?.[0]?.plain_text) {
+          content = contentProp.rich_text[0].plain_text;
+        } else if (contentProp && 'title' in contentProp && contentProp.title?.[0]?.plain_text) {
+          content = contentProp.title[0].plain_text;
         }
         
         return {

@@ -55,8 +55,6 @@ function IphoneShellContent() {
   const [time, setTime] = useState(formatTime);
   const [lockTime, setLockTime] = useState(formatLockTime);
   const [scale, setScale] = useState(getFrameScale);
-  const [referenceOpacity, setReferenceOpacity] = useState(0);
-  const [isReferenceButtonPressed, setIsReferenceButtonPressed] = useState(false);
   const [isHomeButtonClicked, setIsHomeButtonClicked] = useState(false);
   const [isLockButtonClicked, setIsLockButtonClicked] = useState(false);
   const [blackOverlayOpacity, setBlackOverlayOpacity] = useState(0);
@@ -148,17 +146,6 @@ function IphoneShellContent() {
     }
   }, []);
 
-  useEffect(() => {
-    if (isReferenceButtonPressed) {
-      const onMouseUp = () => {
-        setIsReferenceButtonPressed(false);
-        setReferenceOpacity(0);
-      };
-      window.addEventListener('mouseup', onMouseUp);
-      return () => window.removeEventListener('mouseup', onMouseUp);
-    }
-  }, [isReferenceButtonPressed]);
-
   const app = activeAppId ? getApp(activeAppId) : null;
   const Component = app?.component;
   const isHomeScreen = !isLocked && !activeAppId;
@@ -171,25 +158,6 @@ function IphoneShellContent() {
   const isNotesApp = activeAppId === 'notes';
   const isYoutubeApp = activeAppId === 'youtube';
   const isNotesDetailViewActive = isNotesApp && isNotesDetailView;
-  const referenceImage = isHomeScreen 
-    ? '/assets/iphone/samplehomescreen.jpg' 
-    : isSettingsApp
-    ? '/assets/iphone/samplesettingsscreen.webp'
-    : isMusicApp
-    ? '/assets/iphone/samplemusicapp.jpg'
-    : isPhotosApp
-    ? '/assets/iphone/samplephotoscreen.webp'
-    : isCalendarApp
-    ? '/assets/iphone/samplecalendarscreen.webp'
-    : isNotesDetailViewActive
-    ? '/assets/iphone/sample-notes-note-screen.webp'
-    : isNotesApp
-    ? '/assets/iphone/sample-notes-screen.webp'
-    : isYoutubeApp
-    ? '/assets/iphone/sample-youtube-play-screen.webp'
-    : isVisualizerApp
-    ? '/assets/iphone/samplescreen.jpg'
-    : '/assets/iphone/samplescreen.jpg';
 
   return (
     <div className="iphone-page">
@@ -347,41 +315,6 @@ function IphoneShellContent() {
           {showWelcomeDialog && (
             <WelcomeDialog onClose={() => setShowWelcomeDialog(false)} />
           )}
-        </div>
-
-        <img
-          src={referenceImage}
-          alt="Reference"
-          className="iphone-reference-overlay"
-          style={{ opacity: referenceOpacity }}
-        />
-
-        <div className="iphone-reference-controls">
-          <label htmlFor="reference-opacity-slider" className="iphone-reference-label">
-            Reference Opacity:
-          </label>
-          <input
-            id="reference-opacity-slider"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={referenceOpacity}
-            onChange={(e) => setReferenceOpacity(parseFloat(e.target.value))}
-            className="iphone-reference-slider"
-          />
-          <span className="iphone-reference-value">{Math.round(referenceOpacity * 100)}%</span>
-          <button
-            type="button"
-            className="iphone-reference-max-button"
-            onMouseDown={() => {
-              setIsReferenceButtonPressed(true);
-              setReferenceOpacity(1);
-            }}
-            aria-label="Hold to view reference at 100% opacity"
-          >
-            100%
-          </button>
         </div>
 
         {/* Black overlay for lock animation */}

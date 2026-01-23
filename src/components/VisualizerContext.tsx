@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useState, useCallback } from 'react';
+import { createContext, useContext, type ReactNode, useState, useCallback } from 'react';
 
 interface VisualizerContextType {
   isPaused: boolean;
