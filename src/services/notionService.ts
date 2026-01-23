@@ -1,0 +1,240 @@
+import type { CalendarEvent, NotionEvent } from '../types/event';
+import type { Note, NotionNote } from '../types/note';
+
+/**
+ * Parses a date string from Notion and creates a Date object in local time.
+ * This prevents timezone issues where dates appear one day earlier.
+ * Handles both date-only (YYYY-MM-DD) and date-time formats.
+ */
+function parseNotionDate(dateStr: string): Date {
+  // Check if it's a date-only string (YYYY-MM-DD) or includes time
+  if (dateStr.includes('T')) {
+    // Date-time format: extract just the date part and parse in local time
+    const dateOnly = dateStr.split('T')[0];
+    const [year, month, day] = dateOnly.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  } else {
+    // Date-only format (YYYY-MM-DD)
+    // Parse and create date in local time to avoid timezone shifts
+    const [year, month, day] = dateStr.split('-').map(Number);
+    // month is 0-indexed in JavaScript Date constructor
+    return new Date(year, month - 1, day);
+  }
+}
+
+/**
+ * Fetches events from Notion database via a backend proxy
+ * 
+ * IMPORTANT: This calls a backend API endpoint that handles the Notion API calls
+ * to keep your API key secure. You'll need to set up a backend server.
+ * 
+ * For development, you can use a simple Node.js/Express server or Vercel serverless function.
+ */
+export async function fetchEventsFromNotion(): Promise<CalendarEvent[]> {
+  try {
+    // This endpoint should be your backend proxy that calls Notion API
+    // For local development: http://localhost:3001/api/notion/events
+    // For production: your deployed backend URL
+    const response = await fetch('/api/notion/events');
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch events: ${response.statusText}`);
+    }
+    
+    const data: NotionEvent[] = await response.json();
+    
+    // Transform Notion data to CalendarEvent format
+    return data
+      .map((notionEvent) => {
+        const properties = notionEvent.properties;
+        
+        // Get title from Name property
+        const title = properties['Name']?.title?.[0]?.plain_text || '';
+        
+        // Handle Venue - could be rich_text or title
+        let venueName = '';
+        if (properties['Venue']?.rich_text?.[0]?.plain_text) {
+          venueName = properties['Venue'].rich_text[0].plain_text;
+        } else if (properties['Venue']?.title?.[0]?.plain_text) {
+          venueName = properties['Venue'].title[0].plain_text;
+        }
+        
+        const dateStr = properties['Date']?.date?.start;
+        
+        // Handle City - could be rich_text or select
+        let city = '';
+        if (properties['City']?.rich_text?.[0]?.plain_text) {
+          city = properties['City'].rich_text[0].plain_text;
+        } else if (properties['City']?.select?.name) {
+          city = properties['City'].select.name;
+        }
+        
+        // Handle State - could be rich_text or select
+        let state = '';
+        if (properties['State']?.rich_text?.[0]?.plain_text) {
+          state = properties['State'].rich_text[0].plain_text;
+        } else if (properties['State']?.select?.name) {
+          state = properties['State'].select.name;
+        }
+        
+        const ticketLink = properties['Ticket Link']?.url || '';
+        
+        if (!dateStr) {
+          return null; // Skip events without dates
+        }
+        
+        return {
+          id: notionEvent.id,
+          title,
+          venueName,
+          date: parseNotionDate(dateStr),
+          city,
+          state,
+          ticketLink,
+        };
+      })
+      .filter((event): event is CalendarEvent => event !== null);
+  } catch (error) {
+    console.error('Error fetching events from Notion:', error);
+    // Return empty array on error so the app doesn't break
+    return [];
+  }
+}
+
+/**
+ * Alternative: Direct Notion API call (requires API key in frontend - NOT RECOMMENDED for production)
+ * Only use this for development/testing with a public database
+ */
+export async function fetchEventsFromNotionDirect(apiKey: string, databaseId: string): Promise<CalendarEvent[]> {
+  try {
+    const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sorts: [
+          {
+            property: 'Date',
+            direction: 'ascending',
+          },
+        ],
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Notion API error: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    const notionEvents: NotionEvent[] = data.results;
+    
+    // Transform Notion data to CalendarEvent format
+    return notionEvents
+      .map((notionEvent) => {
+        const properties = notionEvent.properties;
+        
+        // Get title from Name property
+        const title = properties['Name']?.title?.[0]?.plain_text || '';
+        
+        // Handle Venue - could be rich_text or title
+        let venueName = '';
+        if (properties['Venue']?.rich_text?.[0]?.plain_text) {
+          venueName = properties['Venue'].rich_text[0].plain_text;
+        } else if (properties['Venue']?.title?.[0]?.plain_text) {
+          venueName = properties['Venue'].title[0].plain_text;
+        }
+        
+        const dateStr = properties['Date']?.date?.start;
+        
+        // Handle City - could be rich_text or select
+        let city = '';
+        if (properties['City']?.rich_text?.[0]?.plain_text) {
+          city = properties['City'].rich_text[0].plain_text;
+        } else if (properties['City']?.select?.name) {
+          city = properties['City'].select.name;
+        }
+        
+        // Handle State - could be rich_text or select
+        let state = '';
+        if (properties['State']?.rich_text?.[0]?.plain_text) {
+          state = properties['State'].rich_text[0].plain_text;
+        } else if (properties['State']?.select?.name) {
+          state = properties['State'].select.name;
+        }
+        
+        const ticketLink = properties['Ticket Link']?.url || '';
+        
+        if (!dateStr) {
+          return null;
+        }
+        
+        return {
+          id: notionEvent.id,
+          title,
+          venueName,
+          date: parseNotionDate(dateStr),
+          city,
+          state,
+          ticketLink,
+        };
+      })
+      .filter((event): event is CalendarEvent => event !== null);
+  } catch (error) {
+    console.error('Error fetching events from Notion:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetches notes from Notion database via a backend proxy
+ * 
+ * IMPORTANT: This calls a backend API endpoint that handles the Notion API calls
+ * to keep your API key secure. You'll need to set up a backend server.
+ * 
+ * For development, you can use a simple Node.js/Express server or Vercel serverless function.
+ */
+export async function fetchNotesFromNotion(): Promise<Note[]> {
+  try {
+    // This endpoint should be your backend proxy that calls Notion API
+    // For local development: http://localhost:3001/api/notion/notes
+    // For production: your deployed backend URL
+    const response = await fetch('/api/notion/notes');
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch notes: ${response.statusText}`);
+    }
+    
+    const data: NotionNote[] = await response.json();
+    
+    // Transform Notion data to Note format
+    return data
+      .map((notionNote) => {
+        const properties = notionNote.properties;
+        
+        // Get name from Name property
+        const name = properties['Name']?.title?.[0]?.plain_text || '';
+        
+        // Handle Content - could be rich_text or title
+        let content = '';
+        if (properties['Content']?.rich_text?.[0]?.plain_text) {
+          content = properties['Content'].rich_text[0].plain_text;
+        } else if (properties['Content']?.title?.[0]?.plain_text) {
+          content = properties['Content'].title[0].plain_text;
+        }
+        
+        return {
+          id: notionNote.id,
+          name,
+          content,
+        };
+      })
+      .filter((note) => note.name !== ''); // Only include notes with a name
+  } catch (error) {
+    console.error('Error fetching notes from Notion:', error);
+    // Return empty array on error so the app doesn't break
+    return [];
+  }
+}

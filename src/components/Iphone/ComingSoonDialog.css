@@ -1,0 +1,164 @@
+/* Dialog Overlay */
+.coming-soon-dialog-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 5000; /* High z-index to appear above all iPhone content (home: 1001, app-view: 1002) */
+  pointer-events: none;
+  padding: 0 40px;
+  animation: coming-soon-dialog-fade-in 400ms ease-out;
+}
+
+@keyframes coming-soon-dialog-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Dialog */
+.coming-soon-dialog {
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  min-height: 200px;
+  background: rgba(62, 66, 101, 0.8);
+  border: 2px solid #C5C7CB;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.6);
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 30px 30px;
+  pointer-events: auto;
+  animation: coming-soon-dialog-spring 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  transform-origin: center center;
+}
+
+@keyframes coming-soon-dialog-spring {
+  0% {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.07);
+  }
+  80% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Top glow */
+.coming-soon-dialog-top-glow {
+  position: absolute;
+  width: 100%;
+  height: 100px;
+  left: 0;
+  top: 0;
+  background: linear-gradient(176.57deg, #969BAD 2.83%, rgba(150, 155, 173, 0) 103.78%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Headline */
+.coming-soon-dialog-headline {
+  position: relative;
+  font-family: 'Helvetica';
+  font-style: normal;
+  font-weight: 700;
+  font-size: 48px;
+  line-height: 54px;
+  color: #FFFFFF;
+  margin: 0 0 24px 0;
+  padding: 0;
+  text-align: center;
+  z-index: 1;
+}
+
+/* Subtitle */
+.coming-soon-dialog-subtitle {
+  position: relative;
+  font-family: 'Helvetica';
+  font-style: normal;
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 38px;
+  color: #FFFFFF;
+  margin: 0 0 50px 0;
+  padding: 0;
+  text-align: center;
+  z-index: 1;
+}
+
+/* Buttons */
+.coming-soon-dialog-buttons {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 0px;
+  gap: 7px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Bar btns */
+.coming-soon-dialog-btn {
+  box-sizing: border-box;
+  width: 260px;
+  height: 70px;
+  border: 1px solid #262C49;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  flex: none;
+  order: 0;
+  flex-grow: 0;
+  font-family: 'Helvetica';
+  font-style: normal;
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 32px;
+  color: #FFFFFF;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coming-soon-dialog-btn-primary {
+  background: linear-gradient(180deg, rgba(160, 162, 170, 0.8) 0%, rgba(103, 105, 115, 0.8) 51.16%, rgba(72, 73, 83, 0.8) 51.51%, rgba(91, 92, 102, 0.8) 100%);
+  box-shadow: inset 0px 2px 0px #D6D9E0;
+  order: 1;
+}
+
+.coming-soon-dialog-btn-secondary {
+  background: linear-gradient(180deg, rgba(97, 99, 106, 0.8) 0%, rgba(46, 47, 54, 0.8) 51.16%, rgba(18, 19, 27, 0.8) 51.51%, rgba(18, 19, 27, 0.8) 100%);
+  box-shadow: inset 0px 2px 0px #8F94AB;
+  order: 0;
+}
+
+/* Label */
+.coming-soon-dialog-btn-label {
+  font-family: 'Helvetica';
+  font-style: normal;
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 32px;
+  color: #FFFFFF;
+  text-align: center;
+}

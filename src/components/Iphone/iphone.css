@@ -1,0 +1,5336 @@
+/**
+ * iPhone (gen 1) home screen and shell.
+ * Screen: 640x960, black. Page: centered on white.
+ */
+
+.iphone-page {
+  min-height: 100vh;
+  background: #092cdd;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0 48px;
+  overflow: hidden;
+}
+
+/* Wrapper sized to scaled frame so it always fits in the viewport */
+.iphone-frame-wrapper {
+  position: relative;
+  width: calc(826px * var(--scale, 1));
+  height: calc(1517px * var(--scale, 1));
+  flex-shrink: 0;
+}
+
+/* Bezel frame: 826x1517, screen 640x960 centered. Asset: /assets/iphone/iPhone.webp */
+.iphone-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 826px;
+  height: 1517px;
+  transform: scale(var(--scale, 1));
+  transform-origin: top left;
+}
+
+.iphone-screen {
+  position: absolute;
+  top: 279px;
+  left: 93px;
+  width: 640px;
+  height: 960px;
+  background: #000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shared wallpaper for lock screen and home screen */
+.iphone-wallpaper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+}
+
+.iphone-frame-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 826px;
+  height: 1517px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Black overlay for lock animation */
+.iphone-black-overlay {
+  position: absolute;
+  top: 279px;
+  left: 93px;
+  width: 640px;
+  height: 960px;
+  background: #000;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* Reference image overlay */
+.iphone-reference-overlay {
+  position: absolute;
+  top: 279px;
+  left: 95px;
+  width: 640px;
+  height: 960px;
+  pointer-events: none;
+  z-index: 10000;
+  object-fit: cover;
+}
+
+/* Reference opacity controls */
+.iphone-reference-controls {
+  position: absolute;
+  top: 1539px;
+  left: 93px;
+  width: 640px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  z-index: 10001;
+  pointer-events: auto;
+}
+
+.iphone-reference-label {
+  font-size: 14px;
+  font-family: Helvetica, Arial, sans-serif;
+  color: #333;
+  white-space: nowrap;
+}
+
+.iphone-reference-slider {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #ddd;
+  border-radius: 3px;
+  outline: none;
+}
+
+.iphone-reference-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #007aff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.iphone-reference-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #007aff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.iphone-reference-value {
+  font-size: 14px;
+  font-family: Helvetica, Arial, sans-serif;
+  color: #333;
+  min-width: 40px;
+  text-align: right;
+}
+
+.iphone-reference-max-button {
+  font-size: 14px;
+  font-family: Helvetica, Arial, sans-serif;
+  color: #fff;
+  background: #007aff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.iphone-reference-max-button:hover {
+  background: #0056b3;
+}
+
+.iphone-reference-max-button:active {
+  background: #004085;
+}
+
+/* Status bar */
+.iphone-statusbar {
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  font-family: Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.iphone-statusbar-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.iphone-statusbar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.iphone-statusbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* App view (full screen below status bar) */
+.iphone-app-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform-origin: center center;
+  animation: iphone-app-in 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  z-index: 1002; /* Above home screen (z-index: 1001) */
+}
+
+.iphone-app-view.iphone-app-closing {
+  animation: iphone-app-out 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes iphone-app-in {
+  from {
+    opacity: 0;
+    transform: scale(0.05);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes iphone-app-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.05);
+  }
+}
+
+/* Home: grid + dock */
+.iphone-home {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 77px 40px 0;
+  min-height: 0;
+  position: relative;
+  z-index: 1001; /* Above black overlay (z-index: 1000) */
+}
+
+.iphone-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 34px 30px;
+  justify-items: center;
+  align-content: start;
+  opacity: 0;
+}
+
+/* Apps appear after dock fades in */
+.iphone-grid-visible {
+  opacity: 1;
+}
+
+/* Ensure grid is visible for animation calculations even when opacity is 0 */
+.iphone-grid-visible,
+.iphone-grid {
+  visibility: visible;
+}
+
+/* Dock: uses image background */
+.iphone-dock {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 20px 18px;
+  margin: 0 -40px 0;
+  width: calc(100% + 80px);
+  background-image: url('/assets/iphone/doc.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+}
+
+/* Dock unlock animation - fades in over 300ms */
+.iphone-dock-visible {
+  animation: unlock-dock-fade-in 300ms ease-out forwards;
+}
+
+/* Opaque dark band behind app labels - removed since using image */
+
+.iphone-dock .iphone-icon-wrap {
+  position: relative;
+  z-index: 1;
+  transform: translateY(12px);
+  margin: 0 15px;
+}
+
+.iphone-dock .iphone-icon-wrap::after {
+  width: 120px;
+  height: 120px;
+  border-radius: 20px;
+}
+
+.iphone-dock .iphone-icon {
+  width: 120px;
+  height: 120px;
+  border-radius: 20px;
+}
+
+.iphone-dock .iphone-icon-label {
+  font-size: 19px;
+  margin-top: 20px;
+  max-width: 120px;
+}
+
+.iphone-icon-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  background: none;
+  border: none;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  /* Animation variables */
+  --start-x: 0px;
+  --start-y: 0px;
+  --animation-delay: 0ms;
+}
+
+.iphone-icon-wrap:active {
+  opacity: 0.8;
+}
+
+/* Grid app load-in animation */
+.iphone-grid .iphone-icon-wrap {
+  /* Initially positioned off-screen - will be set by JS via CSS variables */
+  opacity: 0;
+  transform: translate(var(--start-x, 0px), var(--start-y, 0px));
+}
+
+.iphone-grid .iphone-icon-wrap.iphone-icon-animating {
+  animation: app-load-in 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation-delay: var(--animation-delay, 0ms);
+}
+
+/* Keep icons visible after animate-in completes - ensure they stay visible during state transitions */
+/* Icons that have animated in should maintain their visible state */
+.iphone-grid .iphone-icon-wrap.iphone-icon-animating,
+.iphone-grid .iphone-icon-wrap:not(.iphone-icon-animating):not([style*="opacity: 0"]) {
+  /* Maintain visible state - the animation's 'forwards' keeps opacity: 1 and transform: translate(0, 0) */
+  /* This prevents flicker when transitioning to animate-out */
+}
+
+@keyframes app-load-in {
+  0% {
+    transform: translate(var(--start-x, 0px), var(--start-y, 0px));
+    opacity: 0;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+}
+
+/* Grid app load-out animation (reverse) */
+.iphone-grid .iphone-icon-wrap.iphone-icon-animating-out,
+.iphone-dock .iphone-icon-wrap.iphone-icon-animating-out {
+  animation: app-load-out 600ms cubic-bezier(0.42, 0, 1, 1) forwards;
+  animation-delay: var(--animation-delay, 0ms);
+}
+
+@keyframes app-load-out {
+  0% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--start-x, 0px), var(--start-y, 0px));
+    opacity: 0;
+  }
+}
+
+.iphone-icon {
+  width: 120px;
+  height: 120px;
+  border-radius: 20px;
+  object-fit: contain;
+  background: transparent;
+}
+
+/* Calendar Icon - Dynamic */
+.iphone-icon-calendar-wrapper {
+  width: 120px;
+  height: 120px;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+}
+
+.iphone-icon-calendar-red {
+  width: 100%;
+  height: 28%;
+  background: linear-gradient(
+    to bottom,
+    #d32f2f 0%,
+    #c62828 50%,
+    #b71c1c 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  padding: 0 4px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iphone-icon-calendar-red::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.3) 0%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.iphone-icon-calendar-white {
+  flex: 1;
+  width: 100%;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 72px;
+  font-weight: 600;
+  color: #333333;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+  position: relative;
+  transform: translateY(-5px);
+}
+
+.iphone-icon-calendar-white::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.02) 0%,
+    transparent 20%
+  );
+  pointer-events: none;
+}
+
+.iphone-icon-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 120px;
+  border-radius: 20px;
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    transparent 40%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.iphone-icon-label {
+  margin-top: 6px;
+  font-size: 19px;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  font-family: Helvetica, Arial, sans-serif;
+  letter-spacing: -0.2px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Placeholder app view */
+.iphone-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #000;
+}
+
+.iphone-placeholder-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 12px;
+  font-family: Helvetica, Arial, sans-serif;
+}
+
+.iphone-placeholder-text {
+  font-size: 17px;
+  color: #999;
+  margin: 0;
+  font-family: Helvetica, Arial, sans-serif;
+}
+/* Settings App */
+.iphone-settings {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 1;
+  /* Solid blue background with white stripes spaced 10px apart */
+  background-color: #c5cfe4;
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0px,
+    transparent 10px,
+    rgba(249, 251, 255, 0.2) 10px,
+    rgba(249, 251, 255, 0.2) 12px
+  );
+  background-size: 12px 100%;
+}
+
+
+/* Settings Top Bar */
+.iphone-settings-top-bar {
+  position: relative;
+  width: 100%;
+  height: 88px;
+  background: #7892b1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 10;
+  margin-top: 40px; /* Accommodate status bar */
+  margin-bottom: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+/* White overlay on top 50% of settings bar (matching lock screen style) */
+.iphone-settings-top-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(255, 255, 255, 1.0) 3%,
+    rgba(255, 255, 255, 0.7) 10%,
+    rgba(255, 255, 255, 0.3) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.8;
+}
+
+.iphone-settings-title-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Left-aligned title for YouTube video view */
+.iphone-youtube-top-bar-video .iphone-settings-title-container {
+  justify-content: flex-start;
+  padding-left: 0;
+}
+
+.iphone-youtube-top-bar-video .iphone-settings-title {
+  position: absolute;
+  left: 100px;
+  top: 50%;
+  transform: translateY(-50%) translateX(60px);
+  text-align: left;
+  margin: 0;
+}
+
+.iphone-settings-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+  margin: 0;
+  z-index: 2;
+  transition: transform 0.3s ease;
+  white-space: nowrap;
+  overflow: visible;
+  max-width: 90%;
+  /* Inner bevel effect - indented look */
+  text-shadow: 
+    0 1px 0 rgba(255, 255, 255, 0.2),
+    0 -1px 2px rgba(0, 0, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Scrolling animation for long titles */
+@keyframes scroll-title {
+  0%, 20% {
+    transform: translate(-50%, -50%);
+  }
+  40%, 60% {
+    transform: translate(calc(-50% - 30%), -50%);
+  }
+  80%, 100% {
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Only apply scrolling to titles that are likely too long */
+.iphone-settings-title-container {
+  overflow: hidden;
+}
+
+/* Hover animation removed - titles should not respond to hover */
+
+.iphone-settings-title-active {
+  transform: translate(-50%, -50%);
+}
+
+.iphone-settings-title-slide-out {
+  transform: translate(calc(-50% - 400%), -50%);
+}
+
+.iphone-settings-title-new {
+  transform: translate(calc(320px + 50%), -50%);
+}
+
+.iphone-settings-title-slide-in {
+  transform: translate(-50%, -50%);
+}
+
+/* Left-aligned title animations for YouTube video view */
+.iphone-youtube-top-bar-video .iphone-settings-title-active {
+  transform: translateY(-50%);
+}
+
+.iphone-youtube-top-bar-video .iphone-settings-title-slide-out {
+  transform: translateY(-50%) translateX(-400%);
+}
+
+.iphone-youtube-top-bar-video .iphone-settings-title-new {
+  transform: translateY(-50%) translateX(400%);
+}
+
+.iphone-youtube-top-bar-video .iphone-settings-title-slide-in {
+  transform: translateY(-50%) translateX(60px);
+}
+
+/* Scrolling animation for long YouTube video titles */
+@keyframes iphone-youtube-title-scroll {
+  0%, 20% {
+    transform: translateY(-50%) translateX(60px);
+  }
+  30%, 70% {
+    transform: translateY(-50%) translateX(calc(-1 * var(--youtube-scroll-distance, 0px)));
+  }
+  80%, 100% {
+    transform: translateY(-50%) translateX(60px);
+  }
+}
+
+.iphone-youtube-title-scrolling {
+  animation: iphone-youtube-title-scroll 12s infinite;
+  animation-timing-function: linear;
+}
+
+/* Ensure title doesn't wrap and container clips overflow with fade mask */
+.iphone-youtube-top-bar-video .iphone-settings-title-container {
+  overflow: hidden;
+  position: relative;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    transparent 130px,
+    rgba(0, 0, 0, 0.5) 140px,
+    black 150px,
+    black calc(100% - 30px),
+    rgba(0, 0, 0, 0.5) calc(100% - 20px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    transparent 130px,
+    rgba(0, 0, 0, 0.5) 140px,
+    black 150px,
+    black calc(100% - 30px),
+    rgba(0, 0, 0, 0.5) calc(100% - 20px),
+    transparent 100%
+  );
+}
+
+.iphone-youtube-top-bar-video .iphone-settings-title {
+  white-space: nowrap;
+}
+
+/* Override slide-in transform when scrolling is active */
+.iphone-youtube-top-bar-video .iphone-settings-title-slide-in.iphone-youtube-title-scrolling {
+  transform: translateY(-50%) translateX(60px);
+}
+
+/* Back Button */
+.iphone-settings-back-button {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 3;
+  padding: 0;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+
+.iphone-settings-back-arrow {
+  position: relative;
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.iphone-settings-back-arrow-head {
+  width: 22px;
+  height: 57px;
+  background: linear-gradient(to bottom, #9ab5d9, #5a7ba8);
+  flex-shrink: 0;
+  order: 1;
+  position: relative;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.iphone-settings-back-arrow-stem {
+  width: 110px;
+  height: 57px;
+  background: linear-gradient(to bottom, #9ab5d9, #5a7ba8);
+  flex-shrink: 0;
+  order: 2;
+}
+
+.iphone-settings-back-text {
+  position: absolute;
+  left: 0;
+  width: 132px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  z-index: 1;
+  pointer-events: none;
+  line-height: 57px;
+}
+
+/* Page Container */
+.iphone-settings-page-container {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+}
+
+.iphone-settings-main-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.iphone-settings-sub-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.iphone-settings-page-active {
+  transform: translateX(0);
+  z-index: 1;
+}
+
+.iphone-settings-main-page.iphone-settings-page-slide-out {
+  transform: translateX(-100%);
+}
+
+.iphone-settings-sub-page.iphone-settings-page-slide-in {
+  transform: translateX(100%);
+}
+
+.iphone-settings-sub-page.iphone-settings-page-hidden {
+  transform: translateX(100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.iphone-settings-page {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Wallpaper Grid */
+.iphone-wallpaper-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 0;
+  margin: -12px;
+}
+
+.iphone-wallpaper-thumbnail {
+  aspect-ratio: 1;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.iphone-wallpaper-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Wallpaper Preview */
+.iphone-wallpaper-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10000;
+  overflow: hidden;
+  pointer-events: auto;
+  transform: translateY(100%);
+  transition: transform 0.6s ease;
+  will-change: transform;
+}
+
+.iphone-wallpaper-preview.iphone-wallpaper-preview-visible {
+  transform: translateY(0);
+}
+
+.iphone-wallpaper-preview.iphone-wallpaper-preview-closing {
+  transform: translateY(100%);
+}
+
+/* Hide scrollbar when preview is active */
+.iphone-settings:has(.iphone-wallpaper-preview) {
+  overflow: hidden;
+}
+
+body:has(.iphone-wallpaper-preview) {
+  overflow: hidden;
+}
+
+.iphone-wallpaper-preview-image-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.iphone-wallpaper-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.iphone-wallpaper-preview-image-visible {
+  /* No longer needed - parent handles animation */
+}
+
+/* Preview Top Bar */
+.iphone-wallpaper-preview-top-bar {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  height: 195px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iphone-wallpaper-preview-top-bar-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0.6;
+}
+
+.iphone-wallpaper-preview-top-bar-bg::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.8) calc(2px / 195px * 100%),
+    rgba(255, 255, 255, 1.0) calc(2px / 195px * 100%),
+    rgba(255, 255, 255, 1.0) calc(4px / 195px * 100%),
+    rgba(255, 255, 255, 0.864) calc(4px / 195px * 100%),
+    rgba(255, 255, 255, 0.288) 50%,
+    rgba(255, 255, 255, 0.288) calc(50% + 3px / 195px * 100%),
+    transparent calc(50% + 6px / 195px * 100%)
+  );
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+.iphone-wallpaper-preview-text {
+  position: relative;
+  font-size: 36px;
+  font-weight: 400;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 2;
+}
+
+/* Preview Bottom Bar */
+.iphone-wallpaper-preview-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iphone-wallpaper-preview-bottom-bar-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.65);
+  opacity: 0.6;
+}
+
+.iphone-wallpaper-preview-bottom-bar-bg::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.8) calc(2px / 200px * 100%),
+    rgba(255, 255, 255, 1.0) calc(2px / 200px * 100%),
+    rgba(255, 255, 255, 1.0) calc(4px / 200px * 100%),
+    rgba(255, 255, 255, 0.864) calc(4px / 200px * 100%),
+    rgba(255, 255, 255, 0.288) 50%,
+    rgba(255, 255, 255, 0.288) calc(50% + 3px / 200px * 100%),
+    transparent calc(50% + 6px / 200px * 100%)
+  );
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+.iphone-wallpaper-preview-buttons {
+  position: relative;
+  width: 100%;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10%;
+  z-index: 2;
+  padding: 0 5%;
+}
+
+.iphone-wallpaper-preview-button-wrapper {
+  width: 40%;
+  height: 100px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 28px;
+  padding: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.iphone-wallpaper-preview-button {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 24px;
+  font-size: 28px;
+  font-weight: 700;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 
+    0 1px 2px rgba(255, 255, 255, 0.2),
+    0 -1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.iphone-wallpaper-preview-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 1.0) 0%,
+    rgba(255, 255, 255, 1.0) calc(2px / 100px * 100%),
+    rgba(255, 255, 255, 0.864) calc(2px / 100px * 100%),
+    rgba(255, 255, 255, 0.288) 50%,
+    rgba(255, 255, 255, 0.288) calc(50% + 3px / 100px * 100%),
+    transparent calc(50% + 6px / 100px * 100%)
+  );
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+.iphone-wallpaper-preview-button-cancel::before {
+  opacity: 0.3;
+}
+
+.iphone-wallpaper-preview-button > * {
+  position: relative;
+  z-index: 1;
+}
+
+.iphone-wallpaper-preview-button-cancel {
+  background: #000000;
+  color: #FFFFFF;
+  box-shadow: 
+    0 1px 2px rgba(255, 255, 255, 0.2),
+    0 -1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.iphone-wallpaper-preview-button-cancel:hover {
+  background: #1a1a1a;
+}
+
+.iphone-wallpaper-preview-button-cancel:active {
+  background: #000000;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.iphone-wallpaper-preview-button-set {
+  background: #a0a0a0;
+  color: #000000;
+  box-shadow: 
+    0 1px 2px rgba(255, 255, 255, 0.2),
+    0 -1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.iphone-wallpaper-preview-button-set:hover {
+  background: #a8a8a8;
+}
+
+.iphone-wallpaper-preview-button-set:active {
+  background: #989898;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Profile Section */
+.iphone-settings-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px 30px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.iphone-settings-profile-pic {
+  width: 175px;
+  height: 175px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-top: 30px;
+  margin-bottom: 20px;
+}
+
+.iphone-settings-profile-name {
+  font-size: 44px;
+  font-weight: 600;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.iphone-settings-profile-email {
+  font-size: 32px;
+  font-weight: 300;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+}
+
+/* Settings Options */
+.iphone-settings-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 20px;
+  margin: 30px auto 40px auto;
+  position: relative;
+  z-index: 2;
+  width: 96%;
+  box-sizing: border-box;
+}
+
+.iphone-mail-form-container {
+  position: relative;
+  padding: 0 10px;
+}
+
+.iphone-settings-option {
+  min-height: 88px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #cccccc;
+  border-radius: 18px;
+  font-size: 30px;
+  font-weight: 700;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: left;
+  padding: 0 20px;
+  cursor: pointer;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.iphone-settings-option-chevron {
+  width: 30px;
+  height: 20px;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: block;
+  background-image: url('/assets/utilities/chevron.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Connected buttons - About and Contact */
+.iphone-settings-option-top {
+  border-radius: 18px 18px 0 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid #cccccc;
+}
+
+.iphone-settings-option-middle {
+  border-radius: 0 0 18px 18px;
+  margin-top: 0;
+  margin-bottom: 0;
+  border-top: 1px solid #cccccc;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.iphone-settings-option-bottom {
+  border-radius: 18px;
+  margin-top: 45px; /* Gap before Wallpaper */
+}
+
+/* Three-option group styles for Mail app */
+.iphone-settings-option-middle-three {
+  border-radius: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  border-top: 1px solid #cccccc;
+  border-bottom: 1px solid #cccccc;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.iphone-settings-option-bottom-three {
+  border-radius: 0 0 18px 18px;
+  margin-top: 0;
+  border-top: none;
+  border-bottom: 1px solid #cccccc;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.iphone-settings-option:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.iphone-settings-option:active {
+  background: rgba(240, 240, 240, 0.95);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+/* YouTube App */
+.iphone-youtube {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+}
+
+/* Dark grey title bar for video view */
+.iphone-youtube-top-bar-video {
+  background: #2a2a2a !important;
+}
+
+.iphone-youtube-top-bar-video::before {
+  opacity: 0.2;
+}
+
+/* YouTube Page Container */
+.iphone-youtube-page-container {
+  position: absolute;
+  top: 128px;
+  bottom: 95px;
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.iphone-youtube-page-container.iphone-youtube-page-container-video-view {
+  bottom: 0;
+}
+
+.iphone-youtube-main-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+  margin: 0;
+  padding: 0;
+}
+
+.iphone-youtube-sub-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+  transform: translateX(100%);
+}
+
+.iphone-youtube-page-active {
+  transform: translateX(0);
+  z-index: 1;
+}
+
+.iphone-youtube-main-page.iphone-youtube-page-slide-out {
+  transform: translateX(-100%);
+}
+
+.iphone-youtube-sub-page.iphone-youtube-page-slide-in {
+  transform: translateX(100%);
+}
+
+.iphone-youtube-sub-page.iphone-youtube-page-hidden {
+  transform: translateX(100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.iphone-youtube-content {
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0;
+  margin: 0;
+  /* Hide scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.iphone-youtube-content-inner > div:first-child > .iphone-youtube-video-row {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  border-top: none !important;
+}
+
+.iphone-youtube-content::before {
+  content: '';
+  display: none;
+}
+
+.iphone-youtube-content > * {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.iphone-youtube-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.iphone-youtube-content-inner {
+  width: 100%;
+  min-height: 100%;
+  padding: 0;
+  margin: 0;
+  margin-top: -1px !important;
+  padding-top: 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: stretch;
+  position: relative;
+  top: 0;
+  line-height: 0;
+  font-size: 0;
+  transform: translateY(0);
+}
+
+.iphone-youtube-content-inner > * {
+  line-height: normal;
+  font-size: initial;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.iphone-youtube-content-inner > *:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.iphone-youtube-content-inner > div {
+  display: block;
+}
+
+.iphone-youtube-content-inner > div:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.iphone-youtube-loading,
+.iphone-youtube-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #666;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 16px;
+}
+
+/* YouTube Bottom Navigation Bar */
+.iphone-youtube-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 95px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 10;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.iphone-youtube-bottom-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+/* YouTube Video Rows */
+.iphone-youtube-video-row {
+  width: 100%;
+  height: 170px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  background: #ffffff;
+  margin: 0;
+  padding: 0;
+}
+
+.iphone-youtube-content-inner > div:first-child > .iphone-youtube-video-row {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.iphone-youtube-video-row::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e0e0e0;
+  z-index: 10;
+}
+
+.iphone-youtube-video-thumbnail {
+  width: 220px;
+  height: 170px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.iphone-youtube-video-thumbnail-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.iphone-youtube-video-info {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.iphone-youtube-video-title-section {
+  flex: 2;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 12px;
+  box-sizing: border-box;
+}
+
+.iphone-youtube-video-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #000;
+  margin: 0;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.iphone-youtube-video-stats-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.iphone-youtube-video-likes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.iphone-youtube-video-thumbs-up {
+  width: 22px;
+  height: 28px;
+  flex-shrink: 0;
+  object-fit: contain;
+  display: block;
+  align-self: center;
+  transform: translateY(-3px);
+}
+
+.iphone-youtube-video-like-percentage {
+  font-size: 20px;
+  font-weight: 500;
+  color: #0f9d58;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.iphone-youtube-video-views {
+  font-size: 20px;
+  font-weight: 300;
+  color: #666;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.iphone-youtube-video-meta-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.iphone-youtube-video-duration {
+  font-size: 20px;
+  font-weight: 600;
+  color: #000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.iphone-youtube-video-channel {
+  font-size: 20px;
+  font-weight: 600;
+  color: #666;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.iphone-youtube-video-chevron {
+  width: 70px;
+  height: 70px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: 12px;
+  box-sizing: border-box;
+}
+
+.iphone-youtube-video-chevron-image {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  display: block;
+}
+
+/* YouTube Video View */
+.iphone-youtube-video-view {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  /* Account for top bar (88px + 40px margin) */
+  padding-top: 20px;
+  padding-bottom: 0;
+  box-sizing: border-box;
+}
+
+.iphone-youtube-video-player-container {
+  flex: 1;
+  width: 100%;
+  max-height: 600px;
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.iphone-youtube-video-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Custom Video Controls */
+.iphone-youtube-video-controls {
+  position: absolute;
+  bottom: 57px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 10;
+}
+
+.iphone-youtube-video-controls-bar {
+  background: linear-gradient(180deg, rgba(97, 99, 106, 0.8) 0%, rgba(46, 47, 54, 0.8) 51.16%, rgba(18, 19, 27, 0.8) 51.51%, rgba(18, 19, 27, 0.8) 100%);
+  border: 2px solid #e0e0e0;
+  border-radius: 14px;
+  padding: 12px 24px 20px;
+  width: 510px;
+  height: 121px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  box-shadow: inset 0px 2px 0px #8F94AB, 0 2px 8px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+  gap: 12px;
+  margin: 0 auto;
+}
+
+/* Control buttons row */
+.iphone-youtube-video-controls-bar > .iphone-youtube-video-control-button {
+  flex: 0 0 auto;
+}
+
+.iphone-youtube-video-controls-buttons-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.iphone-youtube-video-control-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  transition: opacity 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.iphone-youtube-video-control-button:hover {
+  opacity: 0.8;
+}
+
+.iphone-youtube-video-control-button:active {
+  opacity: 0.6;
+}
+
+.iphone-youtube-video-control-button-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.iphone-youtube-video-control-button-media {
+  color: #999;
+  width: 48px;
+  height: 48px;
+}
+
+.iphone-youtube-video-control-button-play {
+  color: #999;
+  width: 64px;
+  height: 64px;
+  margin-top: -10px;
+}
+
+.iphone-youtube-video-control-button svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Progress Scrubber */
+.iphone-youtube-video-scrubber {
+  width: 340px;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  margin: -6px auto 0;
+}
+
+.iphone-youtube-video-scrubber-track {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  position: relative;
+  overflow: visible;
+}
+
+.iphone-youtube-video-scrubber-progress {
+  height: 100%;
+  background: hsl(210, 97%, 47%);
+  border-radius: 6px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: width 0.1s linear;
+  overflow: hidden;
+  opacity: 0.7;
+}
+
+.iphone-youtube-video-scrubber-progress::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(230, 245, 255, 1.0) 0%,
+    rgba(230, 245, 255, 1.0) 3%,
+    rgba(230, 245, 255, 0.9) 4%,
+    rgba(230, 245, 255, 0.5) 48%,
+    rgba(230, 245, 255, 0) 52%,
+    rgba(230, 245, 255, 0) 75%,
+    rgba(230, 245, 255, 0.3) 100%
+  );
+  pointer-events: none;
+  border-radius: 6px;
+}
+
+.iphone-youtube-video-scrubber-handle {
+  width: 25px;
+  height: 25px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  transition: left 0.1s linear;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iphone-youtube-video-scrubber-handle img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+.iphone-youtube-video-scrubber-handle:active {
+  cursor: grabbing;
+}
+
+/* Photos App */
+.iphone-photos {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 1;
+  background-color: #ffffff;
+}
+
+
+/* Photos Top Bar */
+.iphone-photos-top-bar {
+  position: relative;
+  width: 100%;
+  height: 88px;
+  background: #4a4a4a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 10;
+  margin-top: 40px; /* Accommodate status bar */
+  overflow: hidden;
+}
+
+/* White overlay on top 50% of photos bar (matching lock screen style) */
+.iphone-photos-top-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.8) calc(2px / 88px * 100%),
+    rgba(255, 255, 255, 1.0) calc(2px / 88px * 100%),
+    rgba(255, 255, 255, 1.0) calc(4px / 88px * 100%),
+    rgba(255, 255, 255, 0.864) calc(4px / 88px * 100%),
+    rgba(255, 255, 255, 0.288) 50%,
+    rgba(255, 255, 255, 0.288) calc(50% + 3px / 88px * 100%),
+    transparent calc(50% + 6px / 88px * 100%)
+  );
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+.iphone-photos-title-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iphone-photos-top-bar-with-back .iphone-photos-title-container {
+  padding-left: 200px;
+}
+
+/* Title bar when viewing photo */
+.iphone-photos-top-bar-photo-view {
+  background: linear-gradient(to bottom, rgba(26, 26, 26, 0.5), rgba(10, 10, 10, 0.5)) !important;
+}
+
+.iphone-photos-top-bar-photo-view::before {
+  opacity: 0.55;
+}
+
+.iphone-photos-top-bar-photo-view .iphone-photos-back-button,
+.iphone-photos-top-bar-photo-view .iphone-photos-title {
+  opacity: 1;
+}
+
+.iphone-photos-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+  margin: 0;
+  z-index: 2;
+  transition: transform 0.3s ease;
+  white-space: nowrap;
+  /* Inner bevel effect - indented look */
+  text-shadow: 
+    0 1px 0 rgba(255, 255, 255, 0.2),
+    0 -1px 2px rgba(0, 0, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.iphone-photos-title-active {
+  transform: translate(-50%, -50%);
+}
+
+.iphone-photos-title-slide-out {
+  transform: translate(calc(-50% - 400%), -50%);
+}
+
+.iphone-photos-title-new {
+  transform: translate(calc(320px + 50%), -50%);
+}
+
+.iphone-photos-title-new-left {
+  transform: translate(calc(-50% - 400%), -50%);
+}
+
+.iphone-photos-title-slide-in {
+  transform: translate(-50%, -50%);
+}
+
+/* Back Button */
+.iphone-photos-back-button {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 182px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 3;
+  padding: 0;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+
+.iphone-photos-back-arrow {
+  position: relative;
+  width: 182px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.iphone-photos-back-arrow-head {
+  width: 22px;
+  height: 57px;
+  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+  flex-shrink: 0;
+  order: 1;
+  position: relative;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.iphone-photos-back-arrow-stem {
+  width: 160px;
+  height: 57px;
+  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+  flex-shrink: 0;
+  order: 2;
+}
+
+.iphone-photos-back-text {
+  position: absolute;
+  left: 0;
+  width: 182px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  z-index: 1;
+  pointer-events: none;
+  line-height: 57px;
+  white-space: nowrap;
+}
+
+/* Page Container */
+.iphone-photos-page-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.iphone-photos-main-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.iphone-photos-sub-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.iphone-photos-page-active {
+  transform: translateX(0);
+  z-index: 1;
+}
+
+.iphone-photos-main-page.iphone-photos-page-slide-out {
+  transform: translateX(-100%);
+}
+
+.iphone-photos-sub-page.iphone-photos-page-slide-in {
+  transform: translateX(100%);
+}
+
+.iphone-photos-sub-page.iphone-photos-page-slide-out-left {
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+
+.iphone-photos-sub-page.iphone-photos-page-hidden {
+  transform: translateX(100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Photo View */
+.iphone-photos-photo-view {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000000;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+  transition: transform 0.3s ease;
+  transform: translateX(100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform;
+  overflow: visible;
+}
+
+.iphone-photos-photo-view-active {
+  transform: translateX(0) !important;
+  z-index: 0;
+}
+
+.iphone-photos-photo-view-hidden {
+  transform: translateX(100%) !important;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Bottom Navigation Bar */
+.iphone-photos-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 88px;
+  background: linear-gradient(to bottom, rgba(26, 26, 26, 0.5), rgba(10, 10, 10, 0.5));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 10;
+  padding: 0;
+}
+
+.iphone-photos-bottom-bar .iphone-photos-nav-button,
+.iphone-photos-bottom-bar .iphone-photos-nav-arrow,
+.iphone-photos-bottom-bar .iphone-photos-nav-arrow-head,
+.iphone-photos-bottom-bar .iphone-photos-nav-arrow-stem {
+  opacity: 1;
+}
+
+.iphone-photos-bottom-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.8) calc(2px / 88px * 100%),
+    rgba(255, 255, 255, 1.0) calc(2px / 88px * 100%),
+    rgba(255, 255, 255, 1.0) calc(4px / 88px * 100%),
+    rgba(255, 255, 255, 0.864) calc(4px / 88px * 100%),
+    rgba(255, 255, 255, 0.288) 50%,
+    rgba(255, 255, 255, 0.288) calc(50% + 3px / 88px * 100%),
+    transparent calc(50% + 6px / 88px * 100%)
+  );
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+.iphone-photos-bottom-bar-spacer {
+  display: none;
+}
+
+.iphone-photos-nav-button {
+  position: absolute;
+  width: 80px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 3;
+  padding: 0;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+  opacity: 1;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.iphone-photos-nav-button-left {
+  left: 183px;
+}
+
+.iphone-photos-nav-button-right {
+  right: 183px;
+}
+
+.iphone-photos-nav-arrow {
+  position: relative;
+  width: 80px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.iphone-photos-nav-arrow-left {
+  justify-content: flex-start;
+  flex-direction: row;
+}
+
+.iphone-photos-nav-arrow-right {
+  justify-content: flex-end;
+  flex-direction: row;
+}
+
+.iphone-photos-nav-arrow-head {
+  width: 22px;
+  height: 37px;
+  background: linear-gradient(to bottom, #ffffff, #ffffff);
+  flex-shrink: 0;
+  position: relative;
+  opacity: 1;
+}
+
+.iphone-photos-nav-arrow-left .iphone-photos-nav-arrow-head {
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.iphone-photos-nav-arrow-right .iphone-photos-nav-arrow-head {
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.iphone-photos-nav-arrow-stem {
+  width: 24px;
+  height: 18px;
+  background: linear-gradient(to bottom, #ffffff, #ffffff);
+  flex-shrink: 0;
+  align-self: center;
+  opacity: 1;
+}
+
+.iphone-photos-page {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  overflow-y: auto;
+  position: relative;
+  background-color: #ffffff;
+  /* Hide scrollbar but allow scrolling */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.iphone-photos-page::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Hide scrollbar when preview is active */
+.iphone-photos:has(.iphone-wallpaper-preview) {
+  overflow: hidden;
+}
+
+/* Photos Content Area */
+.iphone-photos-content {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: #ffffff;
+  /* Hide scrollbar but allow scrolling */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.iphone-photos-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Photos List */
+.iphone-photos-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+}
+
+.iphone-photos-item {
+  width: 100%;
+  height: 108px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  cursor: pointer;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: left;
+  transition: background 0.1s ease;
+}
+
+.iphone-photos-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.iphone-photos-item:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.iphone-photos-item-icon {
+  width: 108px;
+  height: 100%;
+  flex-shrink: 0;
+  margin-left: 0;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+.iphone-photos-item-icon-camera-roll {
+  background: #d0d0d0;
+  border: none;
+}
+
+.iphone-photos-item-icon-empty {
+  background: #f0f0f0;
+  border: none;
+}
+
+.iphone-photos-item-empty {
+  cursor: default;
+  pointer-events: none;
+}
+
+.iphone-photos-item-empty:hover {
+  background: transparent;
+}
+
+.iphone-photos-item-empty:active {
+  background: transparent;
+}
+
+.iphone-photos-item-text {
+  font-size: 30px;
+  font-weight: 400;
+  color: #000000;
+  flex: 1;
+  padding-left: 20px;
+}
+
+.iphone-photos-item-count {
+  color: #666666;
+}
+
+.iphone-photos-item-chevron {
+  width: 30px;
+  height: 20px;
+  margin-right: 20px;
+  flex-shrink: 0;
+  display: block;
+  background-image: url('/assets/utilities/chevron.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Profile Section */
+.iphone-photos-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px 30px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.iphone-photos-profile-pic {
+  width: 175px;
+  height: 175px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 20px;
+}
+
+.iphone-photos-profile-name {
+  font-size: 44px;
+  font-weight: 600;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.iphone-photos-profile-email {
+  font-size: 32px;
+  font-weight: 300;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+}
+
+/* Photos Options */
+.iphone-photos-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 20px;
+  margin-top: 30px;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 2;
+}
+
+.iphone-photos-option {
+  height: 88px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #cccccc;
+  border-radius: 18px;
+  font-size: 30px;
+  font-weight: 700;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: left;
+  padding: 0 20px;
+  cursor: pointer;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.iphone-photos-option-chevron {
+  width: 30px;
+  height: 20px;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: block;
+  background-image: url('/assets/utilities/chevron.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Connected buttons - About and Contact */
+.iphone-photos-option-top {
+  border-radius: 18px 18px 0 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.iphone-photos-option-middle {
+  border-radius: 0 0 18px 18px;
+  margin-top: 0;
+  margin-bottom: 0;
+  border-top: 1px solid #cccccc;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.iphone-photos-option-bottom {
+  border-radius: 18px;
+  margin-top: 45px; /* Gap before Wallpaper */
+}
+
+.iphone-photos-option:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.iphone-photos-option:active {
+  background: rgba(240, 240, 240, 0.95);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Home button: hit area over the bezel’s home button (frame image draws the visible one) */
+.iphone-home-button {
+  position: absolute;
+  bottom: 101px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 2;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease;
+}
+
+.iphone-home-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.iphone-home-button-clicked {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.iphone-home-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+
+/* Lock button - positioned above screen, vertically mirrored from home button */
+.iphone-lock-button {
+  position: absolute;
+  top: 21px;
+  left: calc(50% + 190px);
+  transform: translateX(-50%);
+  width: 140px;
+  height: 20px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 2;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease;
+}
+
+.iphone-lock-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.iphone-lock-button-clicked {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.iphone-lock-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+
+/* Lock Screen */
+.iphone-lockscreen {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Status bar background */
+.iphone-lockscreen-statusbar-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.75) 100%);
+  z-index: 2000; /* Always on top - above home (1001) and app view (1002) */
+  opacity: 0.6;
+}
+
+/* Status bar background for calendar app - match title bar color */
+.iphone-lockscreen-statusbar-bg.iphone-statusbar-calendar {
+  background: #5a6b8a;
+  opacity: 1;
+}
+
+/* Lock screen status bar */
+.iphone-lockscreen-statusbar {
+  position: relative;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  font-size: 20px;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  z-index: 2001; /* Always on top - above status bar background (2000) */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.iphone-lockscreen-statusbar-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transform: translateY(3px);
+}
+
+.iphone-lockscreen-signal {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 29px;
+  transform: translateY(-3px);
+}
+
+.iphone-lockscreen-signal-bar {
+  width: 5px;
+  background: #FFFFFF;
+  border-radius: 1px;
+}
+
+.iphone-lockscreen-signal-bar:nth-child(1) {
+  height: 9px;
+}
+
+.iphone-lockscreen-signal-bar:nth-child(2) {
+  height: 11px;
+}
+
+.iphone-lockscreen-signal-bar:nth-child(3) {
+  height: 13px;
+}
+
+.iphone-lockscreen-signal-bar:nth-child(4) {
+  height: 15px;
+}
+
+.iphone-lockscreen-signal-bar:nth-child(5) {
+  height: 18px;
+}
+
+.iphone-lockscreen-wifi {
+  font-size: 20px;
+}
+
+.iphone-lockscreen-carrier {
+  font-size: 26px;
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+.iphone-lockscreen-statusbar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%) translateY(5px);
+  display: flex;
+  align-items: center;
+}
+
+.iphone-lockscreen-lock-icon {
+  font-size: 26px;
+  color: #FFFFFF;
+  filter: grayscale(100%) brightness(200%);
+  opacity: 1;
+}
+
+/* Lock icon fade-out animation - matches bars timing (300ms delay, 325ms duration) */
+.iphone-lockscreen-lock-icon-unlocking {
+  animation: unlock-lock-icon-fade-out 325ms ease-out 300ms forwards;
+}
+
+.iphone-lockscreen-statusbar-time {
+  font-size: 26px;
+  font-weight: 500;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  opacity: 1;
+}
+
+/* Status bar time on home page - fades in with dock (100ms delay to sync with dock at 725ms, 300ms duration) */
+.iphone-lockscreen-statusbar-time-home {
+  opacity: 0;
+  animation: unlock-dock-fade-in 300ms ease-out 100ms forwards;
+}
+
+.iphone-lockscreen-statusbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  transform: translateY(3px) scale(2);
+  transform-origin: top right;
+  flex-shrink: 0;
+}
+
+.iphone-lockscreen-battery {
+  display: inline-flex;
+  align-items: center;
+  width: 18px;
+  height: 9px;
+  flex-shrink: 0;
+  margin-right: 0;
+}
+
+.iphone-lockscreen-battery svg {
+  width: 18px;
+  height: 9px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Top bar background behind time */
+.iphone-lockscreen-top-bar {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  height: 195px;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: transform 325ms ease-out;
+}
+
+/* Top bar unlock animation - moves up out of view */
+.iphone-lockscreen-top-bar-unlocking {
+  animation: unlock-top-bar 325ms ease-out 300ms forwards;
+}
+
+.iphone-lockscreen-top-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 1;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.iphone-lockscreen-top-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.8) calc(2px / 195px * 100%),
+    rgba(255, 255, 255, 1.0) calc(2px / 195px * 100%),
+    rgba(255, 255, 255, 1.0) calc(4px / 195px * 100%),
+    rgba(255, 255, 255, 0.864) calc(4px / 195px * 100%),
+    rgba(255, 255, 255, 0.288) 50%,
+    rgba(255, 255, 255, 0.288) calc(50% + 3px / 195px * 100%),
+    transparent calc(50% + 6px / 195px * 100%)
+  );
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+/* Time and date display */
+.iphone-lockscreen-time-date {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  height: 195px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  z-index: 12;
+  margin-top: -12px;
+  pointer-events: none;
+  transition: transform 325ms ease-out;
+}
+
+/* Time and date unlock animation - moves up out of view with top bar */
+.iphone-lockscreen-time-date-unlocking {
+  animation: unlock-top-bar 325ms ease-out 300ms forwards;
+}
+
+.iphone-lockscreen-time {
+  font-size: 160px;
+  font-weight: 350;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 2px;
+  margin-bottom: -5px;
+}
+
+.iphone-lockscreen-date {
+  font-size: 28px;
+  font-weight: 400;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0;
+  margin-top: -8px;
+}
+
+/* Bottom bar background behind slide to unlock */
+.iphone-lockscreen-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: transform 325ms ease-out;
+}
+
+/* Bottom bar unlock animation - moves down out of view */
+.iphone-lockscreen-bottom-bar-unlocking {
+  animation: unlock-bottom-bar 325ms ease-out 300ms forwards;
+}
+
+.iphone-lockscreen-bottom-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.65);
+  opacity: 1;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.iphone-lockscreen-bottom-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.8) calc(2px / 200px * 100%),
+    rgba(255, 255, 255, 1.0) calc(2px / 200px * 100%),
+    rgba(255, 255, 255, 1.0) calc(4px / 200px * 100%),
+    rgba(255, 255, 255, 0.864) calc(4px / 200px * 100%),
+    rgba(255, 255, 255, 0.288) 50%,
+    rgba(255, 255, 255, 0.288) calc(50% + 3px / 200px * 100%),
+    transparent calc(50% + 6px / 200px * 100%)
+  );
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+  mask-image: url("data:image/svg+xml,%3Csvg width='640' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cmask id='slideMask'%3E%3Crect width='640' height='200' fill='white'/%3E%3Crect x='40' y='50' width='560' height='100' rx='20' ry='20' fill='black'/%3E%3C/mask%3E%3C/defs%3E%3Crect width='640' height='200' fill='white' mask='url(%23slideMask)'/%3E%3C/svg%3E");
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  mask-position: center;
+}
+
+/* Slide to unlock container */
+.iphone-lockscreen-slide-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 12;
+  pointer-events: none;
+  transition: transform 325ms ease-out;
+}
+
+/* Slide container unlock animation - moves down out of view with bottom bar */
+.iphone-lockscreen-slide-container-unlocking {
+  animation: unlock-bottom-bar 325ms ease-out 300ms forwards;
+}
+
+.iphone-lockscreen-slide-container > * {
+  pointer-events: auto;
+}
+
+.iphone-lockscreen-slide-bar {
+  position: relative;
+  width: 560px;
+  height: 100px;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.35) 0%,
+    rgba(0, 0, 0, 0.35) 50%,
+    rgba(102, 102, 102, 0.35) 100%
+  );
+  border-radius: 20px;
+  box-shadow: 
+    0 1px 2px rgba(255, 255, 255, 0.2),
+    0 -1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  overflow: visible;
+  z-index: 1;
+  opacity: 1;
+}
+
+.iphone-lockscreen-slide-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.35) 0%,
+    rgba(0, 0, 0, 0.35) 50%,
+    rgba(102, 102, 102, 0.35) 100%
+  );
+  border-radius: 20px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+
+/* Slide button */
+.iphone-lockscreen-slide-button {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  width: 136px;
+  height: calc(100% - 16px);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(245, 245, 245, 0.9) 30%,
+    rgba(235, 235, 235, 0.85) 50%,
+    rgba(220, 220, 220, 0.8) 100%
+  );
+  border-radius: 18px;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.2),
+    inset 2px 2px 4px rgba(255, 255, 255, 0.8);
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.iphone-lockscreen-slide-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0.4) 30%,
+    rgba(255, 255, 255, 0.1) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+  border-radius: 18px 18px 0 0;
+}
+
+.iphone-lockscreen-slide-button:active {
+  cursor: grabbing;
+}
+
+.iphone-lockscreen-slide-arrow {
+  width: 68px;
+  height: 50px;
+  display: block;
+  position: relative;
+  z-index: 1;
+  transform: translateX(5px);
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.4)) drop-shadow(-1px -1px 1px rgba(255, 255, 255, 0.3));
+}
+
+/* Slide text wrapper - handles masking */
+.iphone-lockscreen-slide-text-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  transform: translateY(-50%);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 10;
+  /* Clip from left up to button's right edge - this hides text to the left of button */
+  clip-path: inset(0 0 0 var(--button-right-edge, 144px));
+  -webkit-clip-path: inset(0 0 0 var(--button-right-edge, 144px));
+}
+
+/* Slide text */
+.iphone-lockscreen-slide-text {
+  position: absolute;
+  top: 50%;
+  left: calc(50% + 70px);
+  transform: translate(-50%, -50%);
+  font-size: 49px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.3px;
+  pointer-events: none;
+  text-transform: lowercase;
+  white-space: nowrap;
+  min-width: 400px;
+  text-align: center;
+}
+
+.iphone-lockscreen-slide-text::before {
+  content: "slide to unlock";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  font-size: 49px;
+  font-weight: 400;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.3px;
+  text-transform: lowercase;
+  white-space: nowrap;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
+  z-index: 1;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 30%,
+    rgba(255, 255, 255, 1.0) 50%,
+    transparent 70%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: slide-text-sweep 2s linear infinite;
+}
+
+@keyframes slide-text-sweep {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+/* Unlock animation keyframes */
+@keyframes unlock-top-bar {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes unlock-bottom-bar {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes unlock-dock-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes unlock-apps-appear {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes unlock-lock-icon-fade-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Music App */
+.iphone-music {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+}
+
+/* Music Top Bar */
+.iphone-music-top-bar {
+  position: relative;
+  width: 100%;
+  height: 88px;
+  background: linear-gradient(to bottom, #ffffff, #f5f5f5);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  z-index: 10;
+  margin-top: 40px; /* Accommodate status bar */
+  overflow: hidden;
+  padding: 0 8px;
+}
+
+.iphone-music-title-container {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Add fade mask for scrolling titles - positioned next to buttons */
+.iphone-music-title-container-scrolling {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    transparent 140px,
+    rgba(0, 0, 0, 0.5) 145px,
+    black 150px,
+    black calc(100% - 150px),
+    rgba(0, 0, 0, 0.5) calc(100% - 145px),
+    transparent calc(100% - 140px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    transparent 140px,
+    rgba(0, 0, 0, 0.5) 145px,
+    black 150px,
+    black calc(100% - 150px),
+    rgba(0, 0, 0, 0.5) calc(100% - 145px),
+    transparent calc(100% - 140px),
+    transparent 100%
+  );
+}
+
+.iphone-music-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px;
+  font-weight: 600;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+  margin: 0;
+  z-index: 2;
+  white-space: nowrap;
+  transition: transform 0.3s ease;
+}
+
+.iphone-music-title-active {
+  transform: translate(-50%, -50%);
+}
+
+.iphone-music-title-slide-out {
+  transform: translate(calc(-50% - 400%), -50%);
+}
+
+.iphone-music-title-new {
+  transform: translate(calc(320px + 50%), -50%);
+}
+
+.iphone-music-title-slide-in {
+  transform: translate(-50%, -50%);
+}
+
+/* When scrolling, change to left-aligned positioning like YouTube */
+.iphone-music-title-scrolling {
+  left: 0;
+  text-align: left;
+}
+
+.iphone-music-title-active.iphone-music-title-scrolling {
+  transform: translateY(-50%) translateX(var(--music-title-start-x, 150px));
+}
+
+.iphone-music-title-slide-in.iphone-music-title-scrolling {
+  transform: translateY(-50%) translateX(var(--music-title-start-x, 150px));
+}
+
+/* Scrolling animation for long titles (YouTube-style) */
+.iphone-music-title-scrolling {
+  animation: iphone-music-title-scroll 12s infinite;
+  animation-timing-function: linear;
+}
+
+@keyframes iphone-music-title-scroll {
+  0%, 20% {
+    transform: translateY(-50%) translateX(var(--music-title-start-x, 150px));
+  }
+  30%, 70% {
+    transform: translateY(-50%) translateX(calc(var(--music-title-start-x, 150px) - var(--youtube-scroll-distance, 0px)));
+  }
+  80%, 100% {
+    transform: translateY(-50%) translateX(var(--music-title-start-x, 150px));
+  }
+}
+
+/* Override slide-in transform when scrolling is active */
+.iphone-music-title-slide-in.iphone-music-title-scrolling,
+.iphone-music-title-active.iphone-music-title-scrolling {
+  transform: translateY(-50%) translateX(60px);
+}
+
+/* Music Back Button */
+.iphone-music-back-button {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 3;
+  padding: 0;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.iphone-music-back-arrow {
+  position: relative;
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.iphone-music-back-arrow-head {
+  width: 22px;
+  height: 57px;
+  background: linear-gradient(to bottom, #666666, #444444);
+  flex-shrink: 0;
+  order: 1;
+  position: relative;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.iphone-music-back-arrow-stem {
+  width: 110px;
+  height: 57px;
+  background: linear-gradient(to bottom, #666666, #444444);
+  flex-shrink: 0;
+  order: 2;
+}
+
+.iphone-music-back-text {
+  position: absolute;
+  left: 0;
+  width: 132px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  z-index: 1;
+  pointer-events: none;
+  line-height: 57px;
+}
+
+/* Now Playing Button */
+.iphone-music-now-playing-button {
+  position: relative;
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 3;
+  padding: 0;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+  margin-right: -18px;
+}
+
+.iphone-music-now-playing-arrow {
+  position: relative;
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.iphone-music-now-playing-arrow-head {
+  width: 22px;
+  height: 57px;
+  background: linear-gradient(to bottom, #666666, #444444);
+  flex-shrink: 0;
+  order: 2;
+  position: relative;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.iphone-music-now-playing-arrow-stem {
+  width: 90px;
+  height: 57px;
+  background: linear-gradient(to bottom, #666666, #444444);
+  flex-shrink: 0;
+  order: 1;
+}
+
+.iphone-music-now-playing-text {
+  position: absolute;
+  left: -16px;
+  width: 132px;
+  text-align: center;
+  font-size: 19.5px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  z-index: 1;
+  pointer-events: none;
+  line-height: 1.1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Music Content Area */
+.iphone-music-content {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #ffffff;
+}
+
+/* Music Page Container */
+.iphone-music-page-container {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+}
+
+.iphone-music-main-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.iphone-music-sub-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.iphone-music-page-active {
+  transform: translateX(0);
+  z-index: 1;
+}
+
+.iphone-music-main-page.iphone-music-page-slide-out {
+  transform: translateX(-100%);
+}
+
+.iphone-music-sub-page.iphone-music-page-slide-in {
+  transform: translateX(100%);
+}
+
+.iphone-music-sub-page.iphone-music-page-hidden {
+  transform: translateX(100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Music List */
+.iphone-music-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+}
+
+.iphone-music-item {
+  width: 100%;
+  height: 88px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  cursor: pointer;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: left;
+  transition: background 0.1s ease;
+}
+
+.iphone-music-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.iphone-music-item:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.iphone-music-item-text {
+  font-size: 30px;
+  font-weight: 400;
+  color: #000000;
+  flex: 1;
+  padding-left: 20px;
+}
+
+.iphone-music-item-chevron {
+  width: 30px;
+  height: 20px;
+  margin-right: 20px;
+  flex-shrink: 0;
+  display: block;
+  background-image: url('/assets/utilities/chevron.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Music Toolbar */
+.iphone-music-toolbar {
+  position: relative;
+  width: 100%;
+  height: 100px;
+  flex-shrink: 0;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.iphone-music-toolbar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.iphone-music-toolbar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  pointer-events: none;
+}
+
+.iphone-music-toolbar-button {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  pointer-events: auto;
+  padding: 0;
+  transition: background 0.2s ease;
+}
+
+.iphone-music-toolbar-button-selected {
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.02) 40%,
+    rgba(0, 0, 0, 0.02) 60%,
+    rgba(0, 0, 0, 0.2) 100%
+  );
+}
+
+/* Calendar App */
+.iphone-calendar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 1;
+  background-color: #ffffff;
+  padding-bottom: 88px; /* Space for bottom bar */
+}
+
+.iphone-calendar-content {
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* When month view is active, prevent content from scrolling */
+.iphone-calendar-content .iphone-calendar-month-view {
+  height: 100%;
+  overflow: hidden;
+}
+
+
+/* Calendar Top Bar */
+.iphone-calendar-top-bar {
+  position: relative;
+  width: 100%;
+  height: 88px;
+  background: #7892b1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 10;
+  margin-top: 40px; /* Accommodate status bar */
+  overflow: hidden;
+}
+
+/* White overlay on top 50% of calendar bar (matching lock screen style) */
+.iphone-calendar-top-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(255, 255, 255, 1.0) 3%,
+    rgba(255, 255, 255, 0.7) 10%,
+    rgba(255, 255, 255, 0.3) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+.iphone-calendar-title-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iphone-calendar-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+  margin: 0;
+  z-index: 2;
+  transition: transform 0.3s ease;
+  white-space: nowrap;
+  /* Inner bevel effect - indented look */
+  text-shadow: 
+    0 1px 0 rgba(255, 255, 255, 0.2),
+    0 -1px 2px rgba(0, 0, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.iphone-calendar-title-active {
+  transform: translate(-50%, -50%);
+}
+
+.iphone-calendar-title-slide-out {
+  transform: translate(calc(-50% - 400%), -50%);
+}
+
+.iphone-calendar-title-new {
+  transform: translate(calc(320px + 50%), -50%);
+}
+
+.iphone-calendar-title-slide-in {
+  transform: translate(-50%, -50%);
+}
+
+/* Back Button */
+.iphone-calendar-back-button {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 3;
+  padding: 0;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+
+.iphone-calendar-back-arrow {
+  position: relative;
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.iphone-calendar-back-arrow-head {
+  width: 22px;
+  height: 57px;
+  background: linear-gradient(to bottom, #9ab5d9, #5a7ba8);
+  flex-shrink: 0;
+  order: 1;
+  position: relative;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.iphone-calendar-back-arrow-stem {
+  width: 110px;
+  height: 57px;
+  background: linear-gradient(to bottom, #9ab5d9, #5a7ba8);
+  flex-shrink: 0;
+  order: 2;
+}
+
+.iphone-calendar-back-text {
+  position: absolute;
+  left: 0;
+  width: 132px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  z-index: 1;
+  pointer-events: none;
+  line-height: 57px;
+}
+
+/* Page Container */
+.iphone-calendar-page-container {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+}
+
+.iphone-calendar-main-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.iphone-calendar-sub-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.iphone-calendar-page-active {
+  transform: translateX(0);
+  z-index: 1;
+}
+
+.iphone-calendar-main-page.iphone-calendar-page-slide-out {
+  transform: translateX(-100%);
+}
+
+.iphone-calendar-sub-page.iphone-calendar-page-slide-in {
+  transform: translateX(100%);
+}
+
+.iphone-calendar-sub-page.iphone-calendar-page-hidden {
+  transform: translateX(100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.iphone-calendar-page {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Hide scrollbar when preview is active */
+.iphone-calendar:has(.iphone-wallpaper-preview) {
+  overflow: hidden;
+}
+
+/* Profile Section */
+.iphone-calendar-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px 30px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.iphone-calendar-profile-pic {
+  width: 175px;
+  height: 175px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 20px;
+}
+
+.iphone-calendar-profile-name {
+  font-size: 44px;
+  font-weight: 600;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.iphone-calendar-profile-email {
+  font-size: 32px;
+  font-weight: 300;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+}
+
+/* Calendar Options */
+.iphone-calendar-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 20px;
+  margin-top: 30px;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 2;
+}
+
+.iphone-calendar-option {
+  height: 88px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #cccccc;
+  border-radius: 18px;
+  font-size: 30px;
+  font-weight: 700;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: left;
+  padding: 0 20px;
+  cursor: pointer;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.iphone-calendar-option-chevron {
+  width: 30px;
+  height: 20px;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: block;
+  background-image: url('/assets/utilities/chevron.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Connected buttons - About and Contact */
+.iphone-calendar-option-top {
+  border-radius: 18px 18px 0 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.iphone-calendar-option-middle {
+  border-radius: 0 0 18px 18px;
+  margin-top: 0;
+  margin-bottom: 0;
+  border-top: 1px solid #cccccc;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.iphone-calendar-option-bottom {
+  border-radius: 18px;
+  margin-top: 45px; /* Gap before Wallpaper */
+}
+
+.iphone-calendar-option:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.iphone-calendar-option:active {
+  background: rgba(240, 240, 240, 0.95);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Reusable Title Bar Component */
+.iphone-title-bar {
+  position: relative;
+  width: 100%;
+  height: 88px;
+  background: #7892b1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 10;
+  margin-top: 40px; /* Accommodate status bar */
+  overflow: hidden;
+}
+
+/* White overlay on top 50% of title bar (matching lock screen style) */
+.iphone-title-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.8) calc(2px / 88px * 100%),
+    rgba(255, 255, 255, 1.0) calc(2px / 88px * 100%),
+    rgba(255, 255, 255, 1.0) calc(4px / 88px * 100%),
+    rgba(255, 255, 255, 0.864) calc(4px / 88px * 100%),
+    rgba(255, 255, 255, 0.288) 50%,
+    rgba(255, 255, 255, 0.288) calc(50% + 3px / 88px * 100%),
+    transparent calc(50% + 6px / 88px * 100%)
+  );
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+.iphone-title-bar-title-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iphone-title-bar-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+  margin: 0;
+  z-index: 2;
+  transition: transform 0.3s ease;
+  white-space: nowrap;
+  /* Inner bevel effect - indented look */
+  text-shadow: 
+    0 1px 0 rgba(255, 255, 255, 0.2),
+    0 -1px 2px rgba(0, 0, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Back Button */
+.iphone-title-bar-back-button {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 3;
+  padding: 0;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.iphone-title-bar-back-arrow {
+  position: relative;
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.iphone-title-bar-back-arrow-head {
+  width: 22px;
+  height: 57px;
+  background: linear-gradient(to bottom, #9ab5d9, #5a7ba8);
+  flex-shrink: 0;
+  order: 1;
+  position: relative;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.iphone-title-bar-back-arrow-stem {
+  width: 110px;
+  height: 57px;
+  background: linear-gradient(to bottom, #9ab5d9, #5a7ba8);
+  flex-shrink: 0;
+  order: 2;
+}
+
+.iphone-title-bar-back-text {
+  position: absolute;
+  left: 0;
+  width: 132px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  z-index: 1;
+  pointer-events: none;
+  line-height: 57px;
+}
+
+.iphone-title-bar-right-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+}
+
+/* Reusable Bottom Bar Component */
+.iphone-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 88px;
+  background: #7892b1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 10;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* White overlay on top 50% of bottom bar (matching title bar style) */
+.iphone-bottom-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(255, 255, 255, 1.0) 3%,
+    rgba(255, 255, 255, 0.7) 10%,
+    rgba(255, 255, 255, 0.3) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.8;
+}
+
+.iphone-bottom-bar-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.iphone-bottom-bar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.iphone-bottom-bar-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* Today Button Container */
+.iphone-calendar-today-container {
+  width: 110px;
+  height: 56px;
+  position: relative;
+  border-radius: 10px;
+  background: transparent;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  box-shadow: 
+    0 2px 0 rgba(255, 255, 255, 0.3),
+    0 -2px 0 rgba(0, 0, 0, 0.15);
+}
+
+.iphone-calendar-today-button {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.iphone-calendar-today-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.iphone-calendar-today-button:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Segmented Control Container */
+.iphone-calendar-segmented-control {
+  width: 220px;
+  height: 56px;
+  position: relative;
+  border-radius: 10px;
+  background: transparent;
+  display: flex;
+  overflow: hidden;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  box-shadow: 
+    0 2px 0 rgba(255, 255, 255, 0.3),
+    0 -2px 0 rgba(0, 0, 0, 0.15);
+}
+
+.iphone-calendar-segmented-button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.iphone-calendar-segmented-button:not(:last-child) {
+  border-right: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+.iphone-calendar-segmented-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.iphone-calendar-segmented-button:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.iphone-calendar-segmented-button-selected {
+  background: linear-gradient(to bottom, #6a7fa0, #5e7294);
+  color: #FFFFFF;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.iphone-calendar-segmented-button-selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4) 0%, transparent 70%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.iphone-calendar-segmented-button-selected:hover {
+  background: linear-gradient(to bottom, #7695b0, #6a7fa0);
+}
+
+/* Month View */
+.iphone-calendar-month-view {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Calendar section wrapper (month nav + grid) - fixed, no scroll */
+.iphone-calendar-month-view > .iphone-calendar-month-nav,
+.iphone-calendar-month-view > .iphone-calendar-grid {
+  flex-shrink: 0;
+}
+
+/* Month Navigation Section - same height as title bar (88px) */
+.iphone-calendar-month-nav {
+  width: 100%;
+  height: 88px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(to bottom, #e0e0e0, #d0d0d0);
+}
+
+/* Top container - 75% height */
+.iphone-calendar-month-nav-top {
+  height: 75%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+.iphone-calendar-month-nav-left,
+.iphone-calendar-month-nav-right {
+  width: 20%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iphone-calendar-month-nav-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iphone-calendar-month-nav-text {
+  font-size: 40px;
+  font-weight: 600;
+  color: #333333;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+}
+
+.iphone-calendar-month-nav-arrow {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.iphone-calendar-month-nav-triangle-left,
+.iphone-calendar-month-nav-triangle-right {
+  width: 0;
+  height: 0;
+}
+
+.iphone-calendar-month-nav-triangle-left {
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 12px solid #333333;
+}
+
+.iphone-calendar-month-nav-triangle-right {
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 12px solid #333333;
+}
+
+/* Bottom container - 25% height */
+.iphone-calendar-month-nav-bottom {
+  height: 25%;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: linear-gradient(to bottom, #d0d0d0, #e0e0e0);
+}
+
+.iphone-calendar-weekday-header {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  color: #666666;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-weight: 500;
+}
+
+/* Calendar Grid */
+.iphone-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  width: 100%;
+  background: #ffffff;
+  border-right: 2px solid #999999;
+  border-bottom: 2px solid #999999;
+}
+
+.iphone-calendar-grid-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 2px solid #999999;
+  border-bottom: 2px solid #999999;
+  position: relative;
+  background: linear-gradient(to bottom, #e8e8e8, #d8d8d8);
+  font-size: 47px;
+  font-weight: 600;
+  color: #333333;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.iphone-calendar-grid-cell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.iphone-calendar-grid-cell::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.iphone-calendar-grid-cell-other-month {
+  color: #999999;
+}
+
+.iphone-calendar-grid-cell-today {
+  background: linear-gradient(to bottom, #6a7fa0, #5e7294);
+  color: #FFFFFF;
+}
+
+.iphone-calendar-grid-cell-selected {
+  background: linear-gradient(to bottom, #e8e8e8, #d8d8d8);
+  color: #333333;
+  position: relative;
+}
+
+/* When today is also selected, keep the today (blue) styling */
+.iphone-calendar-grid-cell-today.iphone-calendar-grid-cell-selected {
+  background: linear-gradient(to bottom, #6a7fa0, #5e7294);
+  color: #FFFFFF;
+}
+
+.iphone-calendar-grid-cell-selected > * {
+  position: relative;
+  z-index: 2;
+}
+
+.iphone-calendar-grid-cell-selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4) 0%, transparent 70%);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+.iphone-calendar-grid-cell-selected .iphone-calendar-grid-cell-event-indicator {
+  background: #6a7fa0;
+}
+
+/* When today is also selected, keep white indicator */
+.iphone-calendar-grid-cell-today.iphone-calendar-grid-cell-selected .iphone-calendar-grid-cell-event-indicator {
+  background: #FFFFFF;
+}
+
+.iphone-calendar-grid-cell-has-events {
+  position: relative;
+}
+
+.iphone-calendar-grid-cell-event-indicator {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6a7fa0;
+  z-index: 2;
+}
+
+.iphone-calendar-grid-cell-today .iphone-calendar-grid-cell-event-indicator {
+  background: #FFFFFF;
+}
+
+/* Remove border from last column */
+.iphone-calendar-grid-cell:nth-child(7n) {
+  border-right: none;
+}
+
+.iphone-calendar-grid-cell:nth-child(7n)::before {
+  display: none;
+}
+
+/* Add border to top row (first 7 cells) */
+.iphone-calendar-grid-cell:nth-child(-n+7) {
+  border-top: 2px solid #999999;
+}
+
+/* Add border to left column (every 7th cell starting from 1) */
+.iphone-calendar-grid-cell:nth-child(7n-6) {
+  border-left: 2px solid #999999;
+}
+
+/* Remove border from last row (last 7 cells) */
+.iphone-calendar-grid-cell:nth-last-child(-n+7) {
+  border-bottom: none;
+}
+
+/* Events Section */
+.iphone-calendar-events-section {
+  width: 100%;
+  background: #ffffff;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Hide scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.iphone-calendar-events-section::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.iphone-calendar-list-view {
+  width: 100%;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Loading Animation */
+.iphone-calendar-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  width: 100%;
+  min-height: 200px;
+}
+
+.iphone-calendar-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #6a7fa0;
+  border-radius: 50%;
+  animation: iphone-calendar-spin 1s linear infinite;
+}
+
+@keyframes iphone-calendar-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.iphone-calendar-events-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #999999;
+  font-size: 18px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.iphone-calendar-events-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.iphone-calendar-list-month-header {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333333;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.iphone-calendar-event-row {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px 0 0;
+  border-bottom: 1px solid #e0e0e0;
+  background: #ffffff;
+  gap: 16px;
+}
+
+.iphone-calendar-event-row-blank {
+  /* Same styling as regular rows, but empty */
+}
+
+.iphone-calendar-event-date-square {
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom, #e8e8e8, #d8d8d8);
+  position: relative;
+}
+
+.iphone-calendar-event-date-square::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.iphone-calendar-event-date-square::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.iphone-calendar-event-date-day {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666666;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  margin-bottom: 2px;
+  position: relative;
+  z-index: 2;
+}
+
+.iphone-calendar-event-date-number {
+  font-size: 47px;
+  font-weight: 600;
+  color: #333333;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1;
+  position: relative;
+  z-index: 2;
+}
+
+.iphone-calendar-event-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+/* Add left margin to event content in month view only (not list view) */
+.iphone-calendar-events-section .iphone-calendar-event-content {
+  padding-left: 20px;
+}
+
+.iphone-calendar-event-title {
+  font-size: 35px;
+  font-weight: 600;
+  color: #333333;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  margin-bottom: 4px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.iphone-calendar-event-subtitle {
+  font-size: 14px;
+  color: #666666;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.2;
+}
+
+.iphone-calendar-event-tickets-button {
+  width: auto;
+  height: 60px;
+  padding: 0 16px;
+  background: linear-gradient(to bottom, #6a7fa0, #5e7294);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  font-size: 22px;
+  font-weight: 600;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+  margin-left: 16px;
+}
+
+.iphone-calendar-event-tickets-button:hover {
+  opacity: 0.9;
+}
+
+.iphone-calendar-event-tickets-button:active {
+  opacity: 0.8;
+}
+
+/* Mail App */
+.iphone-mail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 1;
+  background-color: #e8e8e8;
+  padding-bottom: 88px; /* Space for bottom bar */
+}
+
+.iphone-mail-content {
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Mail Form */
+.iphone-mail-form {
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.iphone-mail-stay-updated {
+  width: 90%;
+  text-align: center;
+  font-size: 36px;
+  font-weight: 600;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  margin-bottom: 20px;
+  margin-top: 50px;
+  box-sizing: border-box;
+}
+
+.iphone-mail-form-field {
+  cursor: default;
+  padding: 20px;
+  align-items: center;
+  min-height: 88px;
+}
+
+.iphone-mail-form-field:hover {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.iphone-mail-form-label {
+  font-size: 30px;
+  font-weight: 700;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  flex-shrink: 1;
+  flex-basis: 41%;
+  max-width: 41%;
+  margin-right: 20px;
+  position: relative;
+  z-index: 2;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+}
+
+.iphone-mail-form-divider {
+  position: absolute;
+  left: 41%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #cccccc;
+  z-index: 1;
+}
+
+.iphone-mail-form-input {
+  flex: 1;
+  flex-basis: 59%;
+  border: none;
+  background: transparent;
+  font-size: 21px;
+  font-weight: 400;
+  color: #000000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  outline: none;
+  text-align: justify;
+  min-width: 0;
+  position: relative;
+  z-index: 2;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+  display: block;
+  padding-top: 0;
+}
+
+.iphone-mail-form-input::placeholder {
+  color: #999999;
+  font-weight: 300;
+}
+
+.iphone-mail-submit-button {
+  width: 90%;
+  height: 88px;
+  margin-top: 20px;
+  padding: 0 20px;
+  background: rgba(0, 122, 255, 0.95);
+  border: 1px solid #007AFF;
+  border-radius: 18px;
+  font-size: 30px;
+  font-weight: 700;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  cursor: pointer;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.iphone-mail-submit-button:hover:not(:disabled) {
+  background: rgba(0, 122, 255, 1);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.iphone-mail-submit-button:active:not(:disabled) {
+  background: rgba(0, 100, 220, 0.95);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.iphone-mail-submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.iphone-mail-status {
+  margin-top: 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-size: 26px;
+  font-weight: 500;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+}
+
+.iphone-mail-status-success {
+  background: rgba(52, 199, 89, 0.1);
+  color: #34C759;
+  border: 1px solid rgba(52, 199, 89, 0.3);
+}
+
+.iphone-mail-status-error {
+  background: rgba(255, 59, 48, 0.1);
+  color: #FF3B30;
+  border: 1px solid rgba(255, 59, 48, 0.3);
+}
+
+/* Notes App */
+.iphone-notes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 1;
+  background-image: url('/assets/notesapp/notes-home.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Notes Top Bar */
+.iphone-notes-top-bar {
+  position: relative;
+  width: 100%;
+  height: 88px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 10;
+  margin-top: 40px; /* Accommodate status bar */
+  overflow: hidden;
+}
+
+/* White overlay on top 50% of notes bar (matching lock screen style) */
+.iphone-notes-top-bar::before {
+  display: none;
+}
+
+.iphone-notes-title-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iphone-notes-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-align: center;
+  margin: 0;
+  z-index: 2;
+  transition: transform 0.3s ease;
+  white-space: nowrap;
+  /* Inner bevel effect - indented look */
+  text-shadow: 
+    0 1px 0 rgba(255, 255, 255, 0.2),
+    0 -1px 2px rgba(0, 0, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.iphone-notes-title-active {
+  transform: translate(-50%, -50%);
+}
+
+.iphone-notes-title-slide-out {
+  transform: translate(calc(-50% - 400%), -50%);
+}
+
+.iphone-notes-title-new {
+  transform: translate(calc(320px + 50%), -50%);
+}
+
+.iphone-notes-title-slide-in {
+  transform: translate(-50%, -50%);
+}
+
+/* Right-aligned title (when it would overlap the button) */
+.iphone-notes-title-right-aligned {
+  left: auto;
+  right: calc(16px + 85px);
+  transform: translate(0, -50%);
+}
+
+.iphone-notes-title-right-aligned.iphone-notes-title-active {
+  transform: translate(0, -50%);
+}
+
+.iphone-notes-title-right-aligned.iphone-notes-title-slide-in {
+  transform: translate(0, -50%);
+}
+
+/* Centered title (default) */
+.iphone-notes-title-centered {
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+}
+
+.iphone-notes-title-centered.iphone-notes-title-active {
+  transform: translate(-50%, -50%);
+}
+
+.iphone-notes-title-centered.iphone-notes-title-slide-in {
+  transform: translate(-50%, -50%);
+}
+
+/* Scrolling animation for long titles */
+.iphone-notes-title-scrolling {
+  animation: iphone-notes-title-scroll 8s infinite;
+  animation-timing-function: linear;
+}
+
+@keyframes iphone-notes-title-scroll {
+  0%, 20% {
+    transform: translate(-50%, -50%);
+  }
+  30%, 70% {
+    transform: translate(calc(-50% - var(--scroll-distance, 0px)), -50%);
+  }
+  80%, 100% {
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Scrolling animation for right-aligned titles */
+.iphone-notes-title-right-aligned.iphone-notes-title-scrolling {
+  animation: iphone-notes-title-scroll-right 8s infinite;
+  animation-timing-function: linear;
+}
+
+@keyframes iphone-notes-title-scroll-right {
+  0%, 20% {
+    transform: translate(0, -50%);
+  }
+  30%, 70% {
+    transform: translate(calc(0px - var(--scroll-distance, 0px)), -50%);
+  }
+  80%, 100% {
+    transform: translate(0, -50%);
+  }
+}
+
+/* Back Button */
+.iphone-notes-back-button {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 3;
+  padding: 0;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.iphone-notes-back-arrow {
+  position: relative;
+  width: 132px;
+  height: 57px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  overflow: visible;
+}
+
+.iphone-notes-back-arrow-svg {
+  width: 132px;
+  height: 57px;
+  display: block;
+}
+
+.iphone-notes-back-text {
+  position: absolute;
+  left: 3px;
+  width: 132px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  z-index: 1;
+  pointer-events: none;
+  line-height: 57px;
+}
+
+/* Notes Page Container */
+.iphone-notes-page-container {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+}
+
+.iphone-notes-main-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.iphone-notes-sub-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.iphone-notes-page-active {
+  transform: translateX(0);
+  z-index: 1;
+}
+
+.iphone-notes-main-page.iphone-notes-page-slide-out {
+  transform: translateX(-100%);
+}
+
+.iphone-notes-sub-page.iphone-notes-page-slide-in {
+  transform: translateX(100%);
+}
+
+.iphone-notes-sub-page.iphone-notes-page-hidden {
+  transform: translateX(100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Notes Content Container */
+.iphone-notes-content {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Notes List */
+.iphone-notes-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+/* Notes Row */
+.iphone-notes-row {
+  width: 100%;
+  height: 94px;
+  border-bottom: 2px solid rgba(58, 46, 32, 0.13);
+  position: relative;
+}
+
+.iphone-notes-row-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.iphone-notes-row-label {
+  font-size: 42px;
+  font-weight: 400;
+  color: #4c3c2b;
+  font-family: 'Marker Felt', 'MarkerFelt-Wide', 'Comic Sans MS', cursive;
+  -webkit-font-smoothing: antialiased;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iphone-notes-row-chevron {
+  width: 40px;
+  height: 26px;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: block;
+  background-image: url('/assets/utilities/chevron.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.iphone-notes-row-empty {
+  /* Empty rows have the same styling */
+}
+
+/* Note Detail Page */
+.iphone-notes-detail-page {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  position: relative;
+  padding: 4px 0 0 0;
+  /* Hide scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.iphone-notes-detail-page::-webkit-scrollbar {
+  display: none;
+}
+
+.iphone-notes-detail-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.iphone-notes-detail-content::before {
+  content: '';
+  position: absolute;
+  left: 43px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #b8866b;
+  z-index: 1;
+}
+
+.iphone-notes-detail-content::after {
+  content: '';
+  position: absolute;
+  left: 47px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #b8866b;
+  z-index: 1;
+}
+
+.iphone-notes-detail-row {
+  width: 100%;
+  height: 62px;
+  border-bottom: 2px solid rgba(58, 46, 32, 0.28);
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  font-size: 39px;
+  font-weight: 400;
+  color: #000000;
+  font-family: 'Marker Felt', 'MarkerFelt-Wide', 'Comic Sans MS', cursive;
+  -webkit-font-smoothing: antialiased;
+  padding: 0 20px 0 70px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: visible;
+  line-height: 1;
+}
+
+.iphone-notes-detail-row-empty {
+  /* Empty row for spacing */
+}
+
+.iphone-notes-detail-text {
+  display: inline-block;
+  transform: translate(-1px, 5px);
+  line-height: 1;
+}
+
+.iphone-notes-detail-row-no-border {
+  border-bottom: none !important;
+}
+
+/* Notes Loading Animation */
+.iphone-notes-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  width: 100%;
+  min-height: 200px;
+}
+
+.iphone-notes-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(58, 46, 32, 0.2);
+  border-top-color: #4c3c2b;
+  border-radius: 50%;
+  animation: iphone-notes-spin 1s linear infinite;
+}
+
+@keyframes iphone-notes-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

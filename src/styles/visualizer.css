@@ -1,0 +1,131 @@
+/* Music app (Visualizer) - shared styles */
+
+.visualizer-app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.visualizer-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.visualizer-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 14px;
+  font-family: Helvetica, Arial, sans-serif;
+}
+
+.visualizer-control-bar {
+  width: 100%;
+  height: 32px;
+  min-height: 32px;
+  background: #2a2a2a;
+  border-top: 1px solid #444;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  z-index: 10;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.visualizer-control-btn {
+  width: 24px;
+  height: 24px;
+  background: #444;
+  color: #fff;
+  border: 1px solid #555;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: Helvetica, Arial, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  border-radius: 4px;
+}
+
+.visualizer-control-btn:hover:not(:disabled) {
+  background: #555;
+}
+
+.visualizer-control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.visualizer-time-display {
+  color: #ccc;
+  font-size: 10px;
+  font-family: Helvetica, Arial, sans-serif;
+  min-width: 40px;
+  text-align: center;
+}
+
+.visualizer-slider-container {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.visualizer-slider {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #444;
+  outline: none;
+  opacity: 0.9;
+  border-radius: 2px;
+}
+
+.visualizer-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #888;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.visualizer-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #888;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.visualizer-track-name {
+  color: #ccc;
+  font-size: 11px;
+  flex: 1;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: 8px;
+  font-family: Helvetica, Arial, sans-serif;
+}
