@@ -92,7 +92,11 @@ export async function fetchAboutInfoFromNotion(): Promise<GroupedAboutInfo[]> {
           return null;
         }
         
-        return { title, info, group, url };
+        const result: AboutInfo = { title, info, group };
+        if (url) {
+          result.url = url;
+        }
+        return result;
       })
       .filter((entry): entry is AboutInfo => entry !== null);
     
