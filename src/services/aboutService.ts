@@ -6,6 +6,7 @@ export type AboutInfo = {
   title: string;
   info: string;
   group: string;
+  url?: string; // Optional URL if info is a link
 };
 
 export type GroupedAboutInfo = {
@@ -21,6 +22,7 @@ interface NotionAbout {
     };
     Info?: {
       rich_text?: Array<{ plain_text: string }>;
+      url?: string | null;
     };
     Group?: {
       select?: {
@@ -28,6 +30,16 @@ interface NotionAbout {
       } | null;
     };
   };
+}
+
+// Helper function to check if a string is a valid URL
+function isValidUrl(string: string): boolean {
+  try {
+    const url = new URL(string);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch (_) {
+    return false;
+  }
 }
 
 /**
@@ -52,13 +64,24 @@ export async function fetchAboutInfoFromNotion(): Promise<GroupedAboutInfo[]> {
         // Extract title from Title property
         const title = properties.Title?.title?.[0]?.plain_text || '';
         
-        // Extract info - could be rich_text
+        // Extract info - could be rich_text or url
         let info = '';
-        if (properties.Info?.rich_text) {
+        let url: string | undefined = undefined;
+        
+        // Check if Info is a URL type property
+        if (properties.Info?.url) {
+          url = properties.Info.url;
+          info = url; // Use URL as the display text
+        } else if (properties.Info?.rich_text) {
           // Join all rich_text segments
           info = properties.Info.rich_text
             .map((text) => text.plain_text)
             .join('');
+          
+          // Check if the rich_text content is a valid URL
+          if (isValidUrl(info)) {
+            url = info;
+          }
         }
         
         // Extract group from Group property
@@ -69,7 +92,7 @@ export async function fetchAboutInfoFromNotion(): Promise<GroupedAboutInfo[]> {
           return null;
         }
         
-        return { title, info, group };
+        return { title, info, group, url };
       })
       .filter((entry): entry is AboutInfo => entry !== null);
     

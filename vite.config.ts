@@ -10,12 +10,12 @@ export default defineConfig({
   },
   server: {
     // In local dev, use vercel dev to run serverless functions
-    // If you need to use a separate Express server, uncomment the proxy below
-    // proxy: process.env.NODE_ENV === 'development' ? {
-    //   '/api': {
-    //     target: 'http://localhost:3001',
-    //     changeOrigin: true,
-    //   },
-    // } : undefined,
+    // Or use the Express server with the proxy below
+    proxy: process.env.NODE_ENV === 'development' ? {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    } : undefined,
   },
 })

@@ -64,25 +64,73 @@ export function AboutPage() {
             </div>
           </div>
         ) : (
-          groupedEntries.map((group, groupIndex) => (
-            <div 
-              key={group.group} 
-              className="iphone-settings-options iphone-mail-form-container"
-              style={groupIndex > 0 ? { marginTop: '45px' } : undefined}
-            >
-              <div className="iphone-mail-form-divider"></div>
-              {group.entries.map((entry, entryIndex) => (
-                <div 
-                  key={entry.title + entry.info} 
-                  className={getRowClasses(entryIndex, group.entries.length)}
-                  style={group.entries.length === 1 ? { borderRadius: '18px' } : undefined}
-                >
-                  <span className="iphone-mail-form-label">{entry.title}</span>
-                  <span className="iphone-mail-form-input">{entry.info}</span>
-                </div>
-              ))}
-            </div>
-          ))
+          (() => {
+            let isFirstSection = true;
+            return groupedEntries.flatMap((group, groupIndex) => {
+              // Separate entries into links and non-links
+              const linkEntries = group.entries.filter(entry => entry.url);
+              const nonLinkEntries = group.entries.filter(entry => !entry.url);
+              
+              const sections = [];
+              
+              // Non-link entries with divider
+              if (nonLinkEntries.length > 0) {
+                const marginTop = isFirstSection ? undefined : '45px';
+                isFirstSection = false;
+                sections.push(
+                  <div 
+                    key={`${group.group}-nonlinks`}
+                    className="iphone-settings-options iphone-mail-form-container"
+                    style={marginTop ? { marginTop } : undefined}
+                  >
+                    <div className="iphone-mail-form-divider"></div>
+                    {nonLinkEntries.map((entry, entryIndex) => (
+                      <div 
+                        key={entry.title + entry.info} 
+                        className={getRowClasses(entryIndex, nonLinkEntries.length)}
+                        style={nonLinkEntries.length === 1 ? { borderRadius: '18px' } : undefined}
+                      >
+                        <span className="iphone-mail-form-label">{entry.title}</span>
+                        <span className="iphone-mail-form-input">{entry.info}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+              
+              // Link entries without divider
+              if (linkEntries.length > 0) {
+                // If there were non-link entries in this same group, use smaller spacing (related buttons)
+                // Otherwise, use normal spacing (new section)
+                const marginTop = nonLinkEntries.length > 0 
+                  ? '5px'  // Smaller spacing for related buttons within same group
+                  : (isFirstSection ? undefined : '45px');  // Normal spacing for different sections
+                isFirstSection = false;
+                sections.push(
+                  <div 
+                    key={`${group.group}-links`}
+                    className="iphone-settings-options iphone-mail-form-container"
+                    style={marginTop ? { marginTop } : undefined}
+                  >
+                    {linkEntries.map((entry, entryIndex) => (
+                      <a
+                        key={entry.title + entry.info}
+                        href={entry.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`${getRowClasses(entryIndex, linkEntries.length)} iphone-about-link-button`}
+                        style={linkEntries.length === 1 ? { borderRadius: '18px' } : undefined}
+                      >
+                        <span className="iphone-mail-form-label iphone-about-link-text">{entry.title}</span>
+                      </a>
+                    ))}
+                  </div>
+                );
+              }
+              
+              return sections;
+            });
+          })()
         )}
       </div>
     </div>
