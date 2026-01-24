@@ -48,13 +48,12 @@ document.addEventListener('touchmove', (e) => {
 // Track page visit on load
 try {
   const trackingData = collectTrackingData();
-  console.log('🔍 Collected tracking data:', trackingData);
   // Fire and forget - don't wait for it to complete
-  trackPageVisit(trackingData).catch((error) => {
-    console.error('❌ Error in trackPageVisit:', error);
+  trackPageVisit(trackingData).catch(() => {
+    // Silently fail - tracking shouldn't break the app
   });
 } catch (error) {
-  console.error('❌ Failed to collect tracking data:', error);
+  // Silently fail - tracking shouldn't break the app
 }
 
 createRoot(document.getElementById('root')!).render(

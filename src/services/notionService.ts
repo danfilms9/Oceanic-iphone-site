@@ -255,7 +255,6 @@ export async function fetchNotesFromNotion(): Promise<Note[]> {
  */
 export async function trackPageVisit(trackingData: TrackingData): Promise<void> {
   try {
-    console.log('📊 Tracking page visit...', trackingData);
     const response = await fetch('/api/notion/track-visit', {
       method: 'POST',
       headers: {
@@ -265,23 +264,10 @@ export async function trackPageVisit(trackingData: TrackingData): Promise<void> 
     });
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: response.statusText }));
-      console.error('❌ Failed to track visit:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorData,
-        fullError: JSON.stringify(errorData, null, 2),
-      });
-      // Include error details in the thrown error for better debugging
-      const errorMessage = errorData.message || errorData.error || response.statusText;
-      const errorDetails = errorData.details ? ` Details: ${JSON.stringify(errorData.details)}` : '';
-      throw new Error(`Failed to track visit: ${response.status} ${errorMessage}${errorDetails}`);
+      // Silently fail - tracking shouldn't break the app or spam console
+      return;
     }
-    
-    const result = await response.json();
-    console.log('✅ Page visit tracked successfully:', result);
   } catch (error) {
-    // Log error but don't break the app
-    console.error('❌ Failed to track page visit:', error);
+    // Silently fail - tracking shouldn't break the app
   }
 }
