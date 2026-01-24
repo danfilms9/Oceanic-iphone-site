@@ -505,6 +505,13 @@ export function MusicPlaceholder() {
             setShowVisualizerDialog(false);
             setShowPresaveConfirmationDialog(true);
           }}
+          onOpenVisualizer={() => {
+            setShowVisualizerDialog(false);
+            closeApp(); // Close music app
+            setTimeout(() => {
+              openApp('visualizer'); // Open visualizer app
+            }, 100);
+          }}
         />
       )}
       

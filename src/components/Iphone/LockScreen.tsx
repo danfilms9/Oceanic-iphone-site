@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { playAudio, unlockAudioContext } from '../../utils/audioUtils';
 import './iphone.css';
 
 function formatLockTime() {
@@ -55,6 +56,8 @@ export function LockScreen({ onUnlock, isUnlocking = false }: LockScreenProps) {
       setStartX(relativeX);
       setStartPosition(slidePosition);
     }
+    // Unlock audio context on mouse down for desktop compatibility
+    unlockAudioContext();
     e.preventDefault();
   };
 
@@ -67,6 +70,9 @@ export function LockScreen({ onUnlock, isUnlocking = false }: LockScreenProps) {
       setStartX(relativeX);
       setStartPosition(slidePosition);
     }
+    // Unlock audio context on touch start for mobile compatibility
+    // This ensures audio can play when unlock is triggered
+    unlockAudioContext();
     e.preventDefault();
   };
 
@@ -103,6 +109,9 @@ export function LockScreen({ onUnlock, isUnlocking = false }: LockScreenProps) {
     // Check if fully slid (within 5px of max) when released
     if (slidePosition >= maxSlide - 5) {
       setSlidePosition(maxSlide);
+      // Play unlock sound immediately while still in user interaction context
+      // This is critical for mobile browsers
+      playAudio('/audio/sound-effects/unlock.mp3');
       // Small delay for visual feedback
       setTimeout(() => {
         onUnlock();

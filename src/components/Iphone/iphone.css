@@ -1718,7 +1718,7 @@ body:has(.iphone-wallpaper-preview) {
 .iphone-youtube-video-controls-buttons-row {
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: center;
   width: 100%;
   position: relative;
   z-index: 1;

@@ -5,7 +5,9 @@ interface VisualizerContextType {
   pausedTime: number | null;
   pause: () => void;
   resume: () => void;
+  dispose: () => void;
   registerPauseResume: (pauseFn: () => number, resumeFn: (time: number) => void) => void;
+  registerDispose: (disposeFn: () => void) => void;
 }
 
 const VisualizerContext = createContext<VisualizerContextType | undefined>(undefined);
@@ -15,10 +17,15 @@ export function VisualizerProvider({ children }: { children: ReactNode }) {
   const [pausedTime, setPausedTime] = useState<number | null>(null);
   const [pauseFn, setPauseFn] = useState<(() => number) | null>(null);
   const [resumeFn, setResumeFn] = useState<((time: number) => void) | null>(null);
+  const [disposeFn, setDisposeFn] = useState<(() => void) | null>(null);
 
   const registerPauseResume = useCallback((pause: () => number, resume: (time: number) => void) => {
     setPauseFn(() => pause);
     setResumeFn(() => resume);
+  }, []);
+
+  const registerDispose = useCallback((dispose: () => void) => {
+    setDisposeFn(() => dispose);
   }, []);
 
   const pause = useCallback(() => {
@@ -37,6 +44,14 @@ export function VisualizerProvider({ children }: { children: ReactNode }) {
     }
   }, [resumeFn, pausedTime]);
 
+  const dispose = useCallback(() => {
+    if (disposeFn) {
+      disposeFn();
+      setIsPaused(false);
+      setPausedTime(null);
+    }
+  }, [disposeFn]);
+
   return (
     <VisualizerContext.Provider
       value={{
@@ -44,7 +59,9 @@ export function VisualizerProvider({ children }: { children: ReactNode }) {
         pausedTime,
         pause,
         resume,
+        dispose,
         registerPauseResume,
+        registerDispose,
       }}
     >
       {children}

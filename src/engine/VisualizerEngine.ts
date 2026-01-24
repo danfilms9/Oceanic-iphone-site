@@ -19,6 +19,7 @@ export class VisualizerEngine {
   private lastTime: number = 0;
   private frameCount: number = 0;
   private fpsTime: number = 0;
+  private isStopped: boolean = false;
   
   // Camera state - orbital rotation around center
   private cameraAngle: number = 0; // Rotation angle around center
@@ -172,6 +173,7 @@ export class VisualizerEngine {
   }
   
   public stop(): void {
+    this.isStopped = true;
     if (this.animationId !== null) {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
@@ -509,6 +511,12 @@ export class VisualizerEngine {
   }
   
   private animate = (currentTime: number): void => {
+    // Stop animation loop if stopped
+    if (this.isStopped) {
+      this.animationId = null;
+      return;
+    }
+    
     this.animationId = requestAnimationFrame(this.animate);
     
     const deltaTime = (currentTime - this.lastTime) / 1000;
@@ -517,9 +525,9 @@ export class VisualizerEngine {
     if (deltaTime > 0.1) this.clampedCountInPeriod++;
     const clampedDelta = Math.min(deltaTime, 0.1);
     
-    // Get all stem data
+    // Get all stem data (only if audio controller is available and not stopped)
     let allStemData: Map<string, any> | null = null;
-    if (this.audioController) {
+    if (this.audioController && !this.isStopped) {
       allStemData = this.audioController.getAllStemData();
     }
     
@@ -632,6 +640,7 @@ export class VisualizerEngine {
   };
   
   public dispose(): void {
+    this.isStopped = true;
     this.stop();
     this.particleSystem.dispose();
     this.vocalParticleSystem.dispose();

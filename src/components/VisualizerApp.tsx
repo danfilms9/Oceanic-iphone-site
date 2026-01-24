@@ -4,7 +4,7 @@ import { MultiStemAudioController } from '../audio/MultiStemAudioController';
 import { useVisualizer } from './VisualizerContext';
 
 export function VisualizerApp() {
-  const { registerPauseResume, pausedTime, resume } = useVisualizer();
+  const { registerPauseResume, registerDispose, pausedTime, resume } = useVisualizer();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<VisualizerEngine | null>(null);
   const audioControllerRef = useRef<MultiStemAudioController | null>(null);
@@ -180,7 +180,7 @@ export function VisualizerApp() {
     };
   }, [pausedTime, resume]);
 
-  // Register pause/resume methods with context after initialization
+  // Register pause/resume/dispose methods with context after initialization
   useEffect(() => {
     const pauseVisualizer = (): number => {
       const audioController = audioControllerRef.current;
@@ -212,8 +212,25 @@ export function VisualizerApp() {
       }
     };
 
+    const disposeVisualizer = (): void => {
+      const audioController = audioControllerRef.current;
+      const engine = engineRef.current;
+      if (audioController) {
+        // Fully dispose audio controller (stops all audio, clears sources, closes context)
+        audioController.dispose();
+        audioControllerRef.current = null;
+        setIsPlaying(false);
+      }
+      if (engine) {
+        // Fully dispose engine (stops animation, disposes resources)
+        engine.dispose();
+        engineRef.current = null;
+      }
+    };
+
     registerPauseResume(pauseVisualizer, resumeVisualizer);
-  }, [registerPauseResume]);
+    registerDispose(disposeVisualizer);
+  }, [registerPauseResume, registerDispose]);
 
   const [isDragging, setIsDragging] = useState(false);
 

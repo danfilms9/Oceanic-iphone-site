@@ -43,6 +43,9 @@ export class MultiStemAudioController {
   private lastAnalysisTime: number = 0;
   private cachedStemData: Map<string, StemData> = new Map();
   private isAnalysisRunning: boolean = false;
+  
+  // Disposal flag
+  private isDisposed: boolean = false;
 
   // Resolved when all stems are loaded; play() awaits this so SERUM_3 etc. are in stemAudios before we start
   private loadPromise: Promise<void>;
@@ -102,7 +105,10 @@ export class MultiStemAudioController {
       };
       
       this.mainAudio.onerror = (e) => {
-        console.error('Main audio load error:', e, STEMS.MAIN);
+        // Only log error if not disposed (prevents errors after cleanup)
+        if (!this.isDisposed) {
+          console.error('Main audio load error:', e, STEMS.MAIN);
+        }
       };
       
       this.mainSource = this.audioContext.createMediaElementSource(this.mainAudio);
@@ -148,7 +154,10 @@ export class MultiStemAudioController {
         a.preload = 'auto';
 
         a.onerror = (e) => {
-          console.error(`${stemName} audio load error:`, e, audioPath);
+          // Only log error if not disposed (prevents errors after cleanup)
+          if (!this.isDisposed) {
+            console.error(`${stemName} audio load error:`, e, audioPath);
+          }
         };
 
         // Wait for canplay or timeout
@@ -196,9 +205,19 @@ export class MultiStemAudioController {
   }
 
   public async play(): Promise<void> {
+    // Don't play if disposed
+    if (this.isDisposed) {
+      return;
+    }
+    
     // Ensure all stems (including SERUM_3) are loaded before we play; otherwise stems that
     // load after this forEach are never started and particle orbit / Serum-3 reactivity stays off.
     await this.loadPromise;
+    
+    // Check again after load promise (might have been disposed during load)
+    if (this.isDisposed) {
+      return;
+    }
 
     // Aggressively resume audio context (especially important for mobile)
     if (this.audioContext.state === 'suspended') {
@@ -382,6 +401,11 @@ export class MultiStemAudioController {
   }
 
   public pause(): void {
+    // Don't pause if disposed
+    if (this.isDisposed) {
+      return;
+    }
+    
     if (this.mainAudio) {
       this.mainAudio.pause();
     }
@@ -407,11 +431,17 @@ export class MultiStemAudioController {
   }
 
   public getCurrentTime(): number {
-    return this.mainAudio?.currentTime || 0;
+    if (this.isDisposed || !this.mainAudio) {
+      return 0;
+    }
+    return this.mainAudio.currentTime || 0;
   }
 
   public getDuration(): number {
-    return this.mainAudio?.duration || 0;
+    if (this.isDisposed || !this.mainAudio) {
+      return 0;
+    }
+    return this.mainAudio.duration || 0;
   }
 
   public getCurrentTrackName(): string {
@@ -445,6 +475,11 @@ export class MultiStemAudioController {
   }
 
   public getStemData(stemName: string): StemData | null {
+    // Return null if disposed
+    if (this.isDisposed) {
+      return null;
+    }
+    
     const analyser = this.stemAnalysers.get(stemName);
     const analyzer = this.stemAnalyzers.get(stemName);
     const frequencyData = this.stemFrequencyData.get(stemName);
@@ -501,7 +536,8 @@ export class MultiStemAudioController {
     
     // Log warning if analyser has no data but audio is playing. Can occur under power saver
     // when the browser throttles the media-element → Web Audio pipeline.
-    if (maxFreq === 0 && !audio.paused && !audio.ended && audio.readyState >= 2) {
+    // Don't log if disposed or if audio is paused/ended
+    if (maxFreq === 0 && !this.isDisposed && !audio.paused && !audio.ended && audio.readyState >= 2) {
       const now = Date.now();
       const lastLog = (window as any)[`lastStemWarning_${stemName}`] || 0;
       if (now - lastLog > 5000) {
@@ -532,6 +568,11 @@ export class MultiStemAudioController {
   }
 
   public getAllStemData(): Map<string, StemData> {
+    // Return empty map if disposed
+    if (this.isDisposed) {
+      return new Map();
+    }
+    
     // On mobile, try to use cached data first (from analysis interval)
     // This ensures we have data even if requestAnimationFrame is throttled
     if (isMobileDevice() && this.cachedStemData.size > 0) {
@@ -605,13 +646,19 @@ export class MultiStemAudioController {
 
 
   public dispose(): void {
+    // Mark as disposed first to prevent any new operations
+    this.isDisposed = true;
+    
     // Stop sync interval
     this.stopSyncInterval();
     
     // Stop analysis interval
     this.stopAnalysisInterval();
     
+    // Remove error handlers before cleanup to prevent errors
     if (this.mainAudio) {
+      this.mainAudio.onerror = null;
+      this.mainAudio.onloadedmetadata = null;
       this.mainAudio.pause();
       this.mainAudio.src = '';
       this.mainAudio = null;
@@ -623,6 +670,8 @@ export class MultiStemAudioController {
     }
     
     this.stemAudios.forEach(audio => {
+      audio.onerror = null;
+      audio.oncanplay = null;
       audio.pause();
       audio.src = '';
     });
@@ -635,7 +684,14 @@ export class MultiStemAudioController {
     
     this.cachedStemData.clear();
     
-    this.audioContext.close();
+    // Close audio context (may throw if already closed, so catch it)
+    try {
+      if (this.audioContext.state !== 'closed') {
+        this.audioContext.close();
+      }
+    } catch (error) {
+      // Ignore errors when closing context
+    }
   }
 }
 

@@ -40,7 +40,7 @@ function getFrameScale(): number {
 
 function IphoneShellContent() {
   const { wallpaper } = useWallpaper();
-  const { pause: pauseVisualizer } = useVisualizer();
+  const { pause: pauseVisualizer, dispose: disposeVisualizer } = useVisualizer();
   const { isDetailView: isNotesDetailView } = useNotes();
   const [isLocked, setIsLocked] = useState(true);
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -217,8 +217,8 @@ function IphoneShellContent() {
             <LockScreen 
               isUnlocking={isUnlocking}
               onUnlock={() => {
-                // Play unlock sound when animation starts
-                playAudio('/audio/sound-effects/unlock.mp3');
+                // Sound is already played in LockScreen component during user interaction
+                // This ensures it works on mobile browsers
                 setIsUnlocking(true);
                 // Delay the actual unlock state change to allow animation
                 // Bars: 300ms delay + 325ms animation = 625ms total
@@ -350,9 +350,9 @@ function IphoneShellContent() {
           onClick={() => {
             // Play home sound when home button is clicked
             playAudio('/audio/sound-effects/home.mp3');
-            // If visualizer is active, pause it before navigating away
+            // If visualizer is active, fully dispose it before navigating away
             if (activeAppId === 'visualizer') {
-              pauseVisualizer();
+              disposeVisualizer();
             }
             // Cancel any existing close timeout
             if (closeAppTimeoutRef.current) {

@@ -14,7 +14,7 @@ let audioContextUnlocked = false;
  * Unlock audio context on first user interaction
  * This is required for mobile browsers to allow audio playback
  */
-function unlockAudioContext() {
+export function unlockAudioContext() {
   if (audioContextUnlocked) return;
   
   // Create a silent audio buffer and play it to unlock the audio context
