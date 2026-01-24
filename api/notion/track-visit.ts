@@ -66,12 +66,27 @@ export default async function handler(
       isFirstVisit,
     });
 
+    // Generate a convenient name for the entry
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const entryName = `${deviceType || 'Unknown'} - ${browser || 'Unknown'} - ${dateStr} ${timeStr}`;
+
     // Create the page in Notion
     const response = await notion.pages.create({
       parent: {
         database_id: databaseId,
       },
       properties: {
+        'Name': {
+          title: [
+            {
+              text: {
+                content: entryName,
+              },
+            },
+          ],
+        },
         'Timestamp': {
           date: {
             start: new Date().toISOString(),
