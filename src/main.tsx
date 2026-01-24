@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import './styles/visualizer.css'
 import App from './App.tsx'
+import { collectTrackingData } from './utils/tracking'
+import { trackPageVisit } from './services/notionService'
 
 // Global error handler to prevent crashes from unhandled promise rejections
 // This is especially important for OBJ file loading and other async operations
@@ -42,6 +44,18 @@ document.addEventListener('touchmove', (e) => {
     e.preventDefault();
   }
 }, { passive: false });
+
+// Track page visit on load
+try {
+  const trackingData = collectTrackingData();
+  // Fire and forget - don't wait for it to complete
+  trackPageVisit(trackingData).catch(() => {
+    // Silently fail - tracking shouldn't break the app
+  });
+} catch (error) {
+  // Silently fail - tracking shouldn't break the app
+  console.warn('Failed to collect tracking data:', error);
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

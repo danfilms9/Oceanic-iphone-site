@@ -1,5 +1,6 @@
 import type { CalendarEvent, NotionEvent } from '../types/event';
 import type { Note, NotionNote } from '../types/note';
+import type { TrackingData } from '../utils/tracking';
 
 /**
  * Parses a date string from Notion and creates a Date object in local time.
@@ -243,5 +244,30 @@ export async function fetchNotesFromNotion(): Promise<Note[]> {
     console.error('Error fetching notes from Notion:', error);
     // Return empty array on error so the app doesn't break
     return [];
+  }
+}
+
+/**
+ * Tracks a page visit by sending tracking data to Notion database via backend proxy
+ * 
+ * This function is called automatically when the site loads to log visitor information.
+ * It fails silently to ensure tracking doesn't break the user experience.
+ */
+export async function trackPageVisit(trackingData: TrackingData): Promise<void> {
+  try {
+    const response = await fetch('/api/notion/track-visit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(trackingData),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to track visit: ${response.statusText}`);
+    }
+  } catch (error) {
+    // Fail silently - we don't want tracking to break the user experience
+    console.warn('Failed to track page visit:', error);
   }
 }
