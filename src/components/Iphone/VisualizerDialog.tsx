@@ -1,14 +1,6 @@
 import { useEffect } from 'react';
+import { playAudio } from '../../utils/audioUtils';
 import './ComingSoonDialog.css';
-
-// Helper function to play audio
-function playAudio(audioPath: string, volume: number = 1.0) {
-  const audio = new Audio(audioPath);
-  audio.volume = volume;
-  audio.play().catch((error) => {
-    console.warn('Failed to play audio:', error);
-  });
-}
 
 interface VisualizerDialogProps {
   onClose?: () => void;
@@ -38,7 +30,12 @@ export function VisualizerDialog({ onClose, onPresave }: VisualizerDialogProps) 
       <div className="coming-soon-dialog">
         <div className="coming-soon-dialog-top-glow"></div>
         <h1 className="coming-soon-dialog-headline">This song is unreleased</h1>
-        <p className="coming-soon-dialog-subtitle">Pre save the song to get early access</p>
+        <p className="coming-soon-dialog-subtitle">
+          Pre save the song to get early access.
+          <br />
+          <br />
+          come back here when you're done :)
+        </p>
         <div className="coming-soon-dialog-buttons">
           <button className="coming-soon-dialog-btn coming-soon-dialog-btn-secondary" onClick={onClose}>
             <span className="coming-soon-dialog-btn-label">Cancel</span>

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ParticleSystem } from './ParticleSystem';
 import { VocalParticleSystem } from './VocalParticleSystem';
 import type { MultiStemAudioController } from '../audio/MultiStemAudioController';
+import { getOptimalPixelRatio } from '../utils/deviceUtils';
 
 export class VisualizerEngine {
   private scene: THREE.Scene;
@@ -110,7 +111,7 @@ export class VisualizerEngine {
         powerPreference: 'high-performance',
       });
       this.renderer.setSize(this.width, this.height);
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      this.renderer.setPixelRatio(getOptimalPixelRatio());
       this.renderer.setClearColor(0x000000, 1);
       
       // Enable tone mapping for bloom effect
@@ -184,7 +185,7 @@ export class VisualizerEngine {
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(getOptimalPixelRatio());
     this.sceneRenderTarget.setSize(width, height);
   }
 

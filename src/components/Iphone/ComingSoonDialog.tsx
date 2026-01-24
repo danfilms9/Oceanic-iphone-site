@@ -1,14 +1,6 @@
 import { useEffect } from 'react';
+import { playAudio } from '../../utils/audioUtils';
 import './ComingSoonDialog.css';
-
-// Helper function to play audio
-function playAudio(audioPath: string, volume: number = 1.0) {
-  const audio = new Audio(audioPath);
-  audio.volume = volume;
-  audio.play().catch((error) => {
-    console.warn('Failed to play audio:', error);
-  });
-}
 
 interface ComingSoonDialogProps {
   onClose?: () => void;

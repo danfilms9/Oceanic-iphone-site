@@ -7,6 +7,7 @@ import { AppNavigationProvider } from './AppNavigationContext';
 import { VisualizerProvider, useVisualizer } from '../VisualizerContext';
 import { useNotes, NotesProvider } from './NotesContext';
 import { WelcomeDialog } from './WelcomeDialog';
+import { playAudio, preloadAudioFiles } from '../../utils/audioUtils';
 import './iphone.css';
 
 const FRAME_W = 826;
@@ -37,14 +38,6 @@ function getFrameScale(): number {
   return Math.max(0.1, Math.min(1, scaleByH, scaleByW));
 }
 
-// Helper function to play audio
-function playAudio(audioPath: string) {
-  const audio = new Audio(audioPath);
-  audio.play().catch((error) => {
-    console.warn('Failed to play audio:', error);
-  });
-}
-
 function IphoneShellContent() {
   const { wallpaper } = useWallpaper();
   const { pause: pauseVisualizer } = useVisualizer();
@@ -68,6 +61,18 @@ function IphoneShellContent() {
   const closeAppTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   const welcomeDialogTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Preload sound effects on mount for better mobile performance
+  useEffect(() => {
+    preloadAudioFiles([
+      '/audio/sound-effects/unlock.mp3',
+      '/audio/sound-effects/lock.mp3',
+      '/audio/sound-effects/home.mp3',
+      '/audio/sound-effects/popup.mp3'
+    ]).catch(error => {
+      console.warn('Failed to preload some audio files:', error);
+    });
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => {

@@ -1,5 +1,6 @@
 import { FrequencyAnalyzer, type FrequencyBands } from './FrequencyAnalyzer';
 import { STEMS } from './playlist';
+import { isMobileDevice, getOptimalFFTSize } from '../utils/deviceUtils';
 
 export interface StemData {
   frequencyBands: FrequencyBands;
@@ -35,6 +36,13 @@ export class MultiStemAudioController {
   private syncInterval: number | null = null;
   private readonly SYNC_INTERVAL_MS = 100; // Sync every 100ms to prevent drift
   private lastSyncRun: number = 0;
+  
+  // Audio analysis interval (independent of requestAnimationFrame for mobile)
+  private analysisInterval: number | null = null;
+  private readonly ANALYSIS_INTERVAL_MS = 16; // ~60fps analysis rate
+  private lastAnalysisTime: number = 0;
+  private cachedStemData: Map<string, StemData> = new Map();
+  private isAnalysisRunning: boolean = false;
 
   // Resolved when all stems are loaded; play() awaits this so SERUM_3 etc. are in stemAudios before we start
   private loadPromise: Promise<void>;
@@ -43,9 +51,12 @@ export class MultiStemAudioController {
     try {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       
+      // Use optimal FFT size based on device
+      const optimalFFTSize = getOptimalFFTSize();
+      
       // Setup main analyser
       this.mainAnalyser = this.audioContext.createAnalyser();
-      this.mainAnalyser.fftSize = 2048;
+      this.mainAnalyser.fftSize = optimalFFTSize;
       this.mainAnalyser.smoothingTimeConstant = 0.8;
     
     const bufferLength = this.mainAnalyser.frequencyBinCount;
@@ -55,7 +66,7 @@ export class MultiStemAudioController {
     const stemNames = ['SYNTH', 'VOCALS', 'DRUMS', 'BASS', 'AUX_FX', 'SERUM_1', 'SERUM_3'];
     stemNames.forEach(stemName => {
       const analyser = this.audioContext.createAnalyser();
-      analyser.fftSize = 2048;
+      analyser.fftSize = optimalFFTSize;
       analyser.smoothingTimeConstant = 0.8;
       
       const stemBufferLength = analyser.frequencyBinCount;
@@ -189,8 +200,19 @@ export class MultiStemAudioController {
     // load after this forEach are never started and particle orbit / Serum-3 reactivity stays off.
     await this.loadPromise;
 
+    // Aggressively resume audio context (especially important for mobile)
     if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
+      try {
+        await this.audioContext.resume();
+      } catch (error) {
+        console.warn('Failed to resume audio context on play:', error);
+      }
+    }
+    
+    // On mobile, ensure audio context stays active
+    if (isMobileDevice()) {
+      // Periodically check and resume audio context on mobile
+      this.ensureAudioContextActive();
     }
     
     // Get current time to sync all tracks
@@ -258,6 +280,70 @@ export class MultiStemAudioController {
     
     // Start periodic sync to prevent drift
     this.startSyncInterval();
+    
+    // Start independent audio analysis interval (especially important for mobile)
+    this.startAnalysisInterval();
+  }
+  
+  /**
+   * Ensure audio context stays active (important for mobile)
+   */
+  private ensureAudioContextActive(): void {
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume().catch(err => {
+        console.warn('Failed to resume audio context:', err);
+      });
+    }
+  }
+  
+  /**
+   * Start independent audio analysis interval
+   * This runs separately from requestAnimationFrame to ensure analysis happens
+   * even when rAF is throttled (common on mobile/battery saver mode)
+   */
+  private startAnalysisInterval(): void {
+    this.stopAnalysisInterval();
+    this.lastAnalysisTime = performance.now();
+    
+    const analyze = () => {
+      if (this.isAnalysisRunning) return; // Prevent overlapping analysis
+      
+      const now = performance.now();
+      const delta = now - this.lastAnalysisTime;
+      
+      // Only analyze if enough time has passed (throttle to ~60fps)
+      if (delta >= this.ANALYSIS_INTERVAL_MS) {
+        this.isAnalysisRunning = true;
+        
+        try {
+          // Ensure audio context is active
+          if (isMobileDevice()) {
+            this.ensureAudioContextActive();
+          }
+          
+          // Update cached stem data
+          this.cachedStemData = this.getAllStemData();
+        } catch (error) {
+          console.warn('Error in audio analysis interval:', error);
+        } finally {
+          this.isAnalysisRunning = false;
+          this.lastAnalysisTime = now;
+        }
+      }
+      
+      // Schedule next analysis
+      this.analysisInterval = window.setTimeout(analyze, this.ANALYSIS_INTERVAL_MS);
+    };
+    
+    // Start analysis loop
+    analyze();
+  }
+  
+  private stopAnalysisInterval(): void {
+    if (this.analysisInterval !== null) {
+      clearTimeout(this.analysisInterval);
+      this.analysisInterval = null;
+    }
   }
   
   private startSyncInterval(): void {
@@ -303,6 +389,9 @@ export class MultiStemAudioController {
     
     // Stop sync interval when paused
     this.stopSyncInterval();
+    
+    // Stop analysis interval when paused
+    this.stopAnalysisInterval();
   }
 
   public seekTo(time: number): void {
@@ -366,9 +455,19 @@ export class MultiStemAudioController {
       return null;
     }
     
-    // Ensure audio context is running
+    // Ensure audio context is running (more aggressive on mobile)
     if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume().catch(err => console.error('Failed to resume audio context:', err));
+      this.audioContext.resume().catch(err => {
+        console.error('Failed to resume audio context:', err);
+        // On mobile, try again after a short delay
+        if (isMobileDevice()) {
+          setTimeout(() => {
+            if (this.audioContext.state === 'suspended') {
+              this.audioContext.resume().catch(() => {});
+            }
+          }, 100);
+        }
+      });
     }
     
     // Check if audio is actually playing
@@ -433,7 +532,32 @@ export class MultiStemAudioController {
   }
 
   public getAllStemData(): Map<string, StemData> {
+    // On mobile, try to use cached data first (from analysis interval)
+    // This ensures we have data even if requestAnimationFrame is throttled
+    if (isMobileDevice() && this.cachedStemData.size > 0) {
+      // Return cached data immediately for responsive visuals
+      // The analysis interval will keep the cache updated in the background
+      return this.cachedStemData;
+    }
+    
+    // On desktop or if no cached data, do fresh analysis
+    const freshData = this.getAllStemDataFresh();
+    
+    // Update cache for mobile (in case it gets called before interval starts)
+    if (isMobileDevice()) {
+      this.cachedStemData = freshData;
+    }
+    
+    return freshData;
+  }
+  
+  private getAllStemDataFresh(): Map<string, StemData> {
     const result = new Map<string, StemData>();
+    
+    // Ensure audio context is active
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume().catch(err => console.error('Failed to resume audio context:', err));
+    }
     
     // Add main track data
     if (this.mainAnalyser) {
@@ -484,6 +608,9 @@ export class MultiStemAudioController {
     // Stop sync interval
     this.stopSyncInterval();
     
+    // Stop analysis interval
+    this.stopAnalysisInterval();
+    
     if (this.mainAudio) {
       this.mainAudio.pause();
       this.mainAudio.src = '';
@@ -505,6 +632,8 @@ export class MultiStemAudioController {
       source.disconnect();
     });
     this.stemSources.clear();
+    
+    this.cachedStemData.clear();
     
     this.audioContext.close();
   }
