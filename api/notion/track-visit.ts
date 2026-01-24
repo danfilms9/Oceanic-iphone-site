@@ -66,11 +66,23 @@ export default async function handler(
       isFirstVisit,
     });
 
-    // Generate a convenient name for the entry
+    // Query database to count existing visits
+    let visitCount = 0;
+    try {
+      const existingVisits = await notion.databases.query({
+        database_id: databaseId,
+      });
+      visitCount = existingVisits.results.length;
+    } catch (error) {
+      console.warn('Could not count existing visits, starting from 1:', error);
+      visitCount = 0;
+    }
+
+    // Generate name: "Visit {number} | {Month} {Year}"
     const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    const entryName = `${deviceType || 'Unknown'} - ${browser || 'Unknown'} - ${dateStr} ${timeStr}`;
+    const monthYear = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const visitNumber = visitCount + 1;
+    const entryName = `Visit ${visitNumber} | ${monthYear}`;
 
     // Create the page in Notion
     const response = await notion.pages.create({
