@@ -80,7 +80,7 @@ export default async function handler(
 
     // Generate name: "Visit {number} | {Month} {Year}"
     const now = new Date();
-    const monthYear = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const monthYear = now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     const visitNumber = visitCount + 1;
     const entryName = `Visit ${visitNumber} | ${monthYear}`;
 

@@ -61,6 +61,13 @@ function IphoneShellContent() {
   const closeAppTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   const welcomeDialogTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isFrameImageLoaded, setIsFrameImageLoaded] = useState(false);
+  const [isWallpaperLoaded, setIsWallpaperLoaded] = useState(false);
+  const frameImageRef = useRef<HTMLImageElement | null>(null);
+  const wallpaperImageRef = useRef<HTMLImageElement | null>(null);
+
+  // Check if all critical assets are loaded
+  const isReady = isFrameImageLoaded && isWallpaperLoaded;
 
   // Preload sound effects on mount for better mobile performance
   useEffect(() => {
@@ -73,6 +80,34 @@ function IphoneShellContent() {
       console.warn('Failed to preload some audio files:', error);
     });
   }, []);
+
+  // Preload iPhone frame image
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => setIsFrameImageLoaded(true);
+    img.onerror = () => {
+      console.warn('Failed to load iPhone frame image');
+      setIsFrameImageLoaded(true); // Allow rendering even if image fails
+    };
+    img.src = '/assets/iphone/iPhone.webp';
+    frameImageRef.current = img;
+  }, []);
+
+  // Preload wallpaper image
+  useEffect(() => {
+    if (!wallpaper) {
+      setIsWallpaperLoaded(true); // No wallpaper to load
+      return;
+    }
+    const img = new Image();
+    img.onload = () => setIsWallpaperLoaded(true);
+    img.onerror = () => {
+      console.warn('Failed to load wallpaper image');
+      setIsWallpaperLoaded(true); // Allow rendering even if image fails
+    };
+    img.src = wallpaper;
+    wallpaperImageRef.current = img;
+  }, [wallpaper]);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -163,6 +198,31 @@ function IphoneShellContent() {
   const isNotesApp = activeAppId === 'notes';
   const isYoutubeApp = activeAppId === 'youtube';
   const isNotesDetailViewActive = isNotesApp && isNotesDetailView;
+
+  // Show loading state until critical assets are ready
+  if (!isReady) {
+    return (
+      <div className="iphone-page" style={{ opacity: 1 }}>
+        {/* Preload images in the background */}
+        <img
+          src="/assets/iphone/iPhone.webp"
+          alt=""
+          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+          onLoad={() => setIsFrameImageLoaded(true)}
+          onError={() => setIsFrameImageLoaded(true)}
+        />
+        {wallpaper && (
+          <img
+            src={wallpaper}
+            alt=""
+            style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+            onLoad={() => setIsWallpaperLoaded(true)}
+            onError={() => setIsWallpaperLoaded(true)}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="iphone-page">
@@ -334,11 +394,14 @@ function IphoneShellContent() {
         )}
 
         <img
+          ref={frameImageRef}
           src="/assets/iphone/iPhone.webp"
           alt=""
           className="iphone-frame-img"
           width={826}
           height={1517}
+          onLoad={() => setIsFrameImageLoaded(true)}
+          onError={() => setIsFrameImageLoaded(true)}
         />
 
         <button
