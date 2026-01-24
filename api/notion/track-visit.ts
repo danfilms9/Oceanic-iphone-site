@@ -22,8 +22,16 @@ export default async function handler(
     let databaseId = process.env.NOTION_VISITS_DATABASE_ID;
 
     if (!notionApiKey || !databaseId) {
+      console.error('Missing Notion credentials:', {
+        hasApiKey: !!notionApiKey,
+        hasDatabaseId: !!databaseId,
+      });
       return res.status(500).json({
         error: 'Notion API credentials not configured',
+        details: {
+          hasApiKey: !!notionApiKey,
+          hasDatabaseId: !!databaseId,
+        },
       });
     }
 
@@ -49,12 +57,14 @@ export default async function handler(
 
     const notion = new Client({ auth: notionApiKey });
 
-    // Get IP address from request (if available)
-    const ipAddress = 
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      (req.headers['x-real-ip'] as string) ||
-      req.socket.remoteAddress ||
-      '';
+    console.log('Creating Notion page with database ID:', databaseId);
+    console.log('Tracking data received:', {
+      deviceType,
+      browser,
+      os,
+      sessionId,
+      isFirstVisit,
+    });
 
     // Create the page in Notion
     const response = await notion.pages.create({
@@ -153,18 +163,8 @@ export default async function handler(
         'Is First Visit': {
           checkbox: isFirstVisit || false,
         },
-        // IP Address is only available server-side
-        ...(ipAddress && {
-          'IP Address': {
-            rich_text: [
-              {
-                text: {
-                  content: ipAddress,
-                },
-              },
-            ],
-          },
-        }),
+        // Note: IP Address is available server-side but not included
+        // Add "IP Address" property to your Notion database if you want to track it
       },
     });
 
@@ -172,12 +172,20 @@ export default async function handler(
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+    console.log('✅ Successfully created Notion page:', response.id);
     return res.status(200).json({ success: true, id: response.id });
   } catch (error: any) {
-    console.error('Notion API error:', error);
+    console.error('❌ Notion API error:', {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      body: error.body,
+    });
     return res.status(500).json({
       error: 'Failed to track visit',
       message: error.message,
+      code: error.code,
+      details: error.body || error,
     });
   }
 }
