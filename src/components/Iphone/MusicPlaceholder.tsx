@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { VisualizerDialog } from './VisualizerDialog';
-import { PresaveConfirmationDialog } from './PresaveConfirmationDialog';
 import { useAppNavigation } from './AppNavigationContext';
 
 type MusicTab = 'playlists' | 'artists' | 'songs' | 'albums' | 'more';
@@ -15,9 +13,12 @@ export function MusicPlaceholder() {
   const [playlistsPage, setPlaylistsPage] = useState<PlaylistsPage>('main');
   const [isAnimating, setIsAnimating] = useState(false);
   const [showNewTitle, setShowNewTitle] = useState(false);
-  const [showVisualizerDialog, setShowVisualizerDialog] = useState(false);
-  const [showPresaveConfirmationDialog, setShowPresaveConfirmationDialog] = useState(false);
   const { openApp, closeApp } = useAppNavigation();
+
+  const handleOpenVisualizer = () => {
+    closeApp();
+    setTimeout(() => openApp('visualizer'), 100);
+  };
   
   // Refs for title elements to check if they overflow
   const titleRefs = {
@@ -254,7 +255,7 @@ export function MusicPlaceholder() {
               <div className="iphone-music-list">
                 <button 
                   className="iphone-music-item"
-                  onClick={() => setShowVisualizerDialog(true)}
+                  onClick={handleOpenVisualizer}
                 >
                   <span className="iphone-music-item-text">Hold Me (Palomar Remix)</span>
                   <span className="iphone-music-item-chevron"></span>
@@ -288,7 +289,7 @@ export function MusicPlaceholder() {
               <div className="iphone-music-list">
                 <button 
                   className="iphone-music-item"
-                  onClick={() => setShowVisualizerDialog(true)}
+                  onClick={handleOpenVisualizer}
                 >
                   <span className="iphone-music-item-text">Hold Me (Palomar Remix)</span>
                   <span className="iphone-music-item-chevron"></span>
@@ -302,7 +303,7 @@ export function MusicPlaceholder() {
           <div className="iphone-music-list">
             <button 
               className="iphone-music-item"
-              onClick={() => setShowVisualizerDialog(true)}
+              onClick={handleOpenVisualizer}
             >
               <span className="iphone-music-item-text">Hold Me (Palomar Remix)</span>
               <span className="iphone-music-item-chevron"></span>
@@ -334,7 +335,7 @@ export function MusicPlaceholder() {
               <div className="iphone-music-list">
                 <button 
                   className="iphone-music-item"
-                  onClick={() => setShowVisualizerDialog(true)}
+                  onClick={handleOpenVisualizer}
                 >
                   <span className="iphone-music-item-text">Hold Me (Palomar Remix)</span>
                   <span className="iphone-music-item-chevron"></span>
@@ -443,7 +444,7 @@ export function MusicPlaceholder() {
         </div>
         <button 
           className="iphone-music-now-playing-button"
-          onClick={() => setShowVisualizerDialog(true)}
+          onClick={handleOpenVisualizer}
         >
           <span className="iphone-music-now-playing-text">
             <span>Now</span>
@@ -497,37 +498,6 @@ export function MusicPlaceholder() {
         </div>
       </div>
       
-      {/* Visualizer Dialog */}
-      {showVisualizerDialog && (
-        <VisualizerDialog 
-          onClose={() => setShowVisualizerDialog(false)}
-          onPresave={() => {
-            setShowVisualizerDialog(false);
-            setShowPresaveConfirmationDialog(true);
-          }}
-          onOpenVisualizer={() => {
-            setShowVisualizerDialog(false);
-            closeApp(); // Close music app
-            setTimeout(() => {
-              openApp('visualizer'); // Open visualizer app
-            }, 100);
-          }}
-        />
-      )}
-      
-      {/* Presave Confirmation Dialog */}
-      {showPresaveConfirmationDialog && (
-        <PresaveConfirmationDialog 
-          onClose={() => setShowPresaveConfirmationDialog(false)}
-          onConfirm={() => {
-            setShowPresaveConfirmationDialog(false);
-            closeApp(); // Close music app
-            setTimeout(() => {
-              openApp('visualizer'); // Open visualizer app
-            }, 100);
-          }}
-        />
-      )}
     </div>
   );
 }

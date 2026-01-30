@@ -17,7 +17,7 @@ export function WelcomeDialog({ onClose }: WelcomeDialogProps) {
       <div className="coming-soon-dialog">
         <div className="coming-soon-dialog-top-glow"></div>
         <h1 className="coming-soon-dialog-headline">Hello!</h1>
-        <p className="coming-soon-dialog-subtitle">We added a special song on this iPhone for you hehe</p>
+        <p className="coming-soon-dialog-subtitle">Welcome to Oceanics phone (website). Have a look around!</p>
         <div className="coming-soon-dialog-buttons">
           <button className="coming-soon-dialog-btn coming-soon-dialog-btn-primary" onClick={onClose}>
             <span className="coming-soon-dialog-btn-label">OK</span>
