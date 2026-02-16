@@ -59,6 +59,7 @@ function IphoneShellContent() {
   const [shouldAnimateOut, setShouldAnimateOut] = useState(false);
   const [pendingAppId, setPendingAppId] = useState<string | null>(null);
   const pendingAppIdRef = useRef<string | null>(null);
+  const tourDeepLinkAppliedRef = useRef(false);
   const [isAppClosing, setIsAppClosing] = useState(false);
   const appViewRef = useRef<HTMLDivElement | null>(null);
   const closeAppTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -157,9 +158,10 @@ function IphoneShellContent() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Deep link: /tour → open calendar app after home screen is visible
+  // Deep link: /tour → open calendar app once after home screen is visible (user can close and stay on home)
   useEffect(() => {
-    if (!isTourDeepLink || isLocked || activeAppId || pendingAppId) return;
+    if (!isTourDeepLink || isLocked || activeAppId || pendingAppId || tourDeepLinkAppliedRef.current) return;
+    tourDeepLinkAppliedRef.current = true;
     const timer = setTimeout(() => {
       setShouldAnimateOut(true);
       setPendingAppId('calendar');
