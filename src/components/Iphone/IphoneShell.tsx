@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { IphoneHome } from './IphoneHome';
 import { LockScreen } from './LockScreen';
 import { getApp } from '../../apps/appRegistry';
@@ -39,10 +40,12 @@ function getFrameScale(): number {
 }
 
 function IphoneShellContent() {
+  const location = useLocation();
+  const isTourDeepLink = location.pathname === '/tour';
   const { wallpaper } = useWallpaper();
   const { pause: pauseVisualizer, dispose: disposeVisualizer } = useVisualizer();
   const { isDetailView: isNotesDetailView } = useNotes();
-  const [isLocked, setIsLocked] = useState(true);
+  const [isLocked, setIsLocked] = useState(!isTourDeepLink);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [time, setTime] = useState(formatTime);
@@ -153,6 +156,17 @@ function IphoneShellContent() {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  // Deep link: /tour → open calendar app after home screen is visible
+  useEffect(() => {
+    if (!isTourDeepLink || isLocked || activeAppId || pendingAppId) return;
+    const timer = setTimeout(() => {
+      setShouldAnimateOut(true);
+      setPendingAppId('calendar');
+      pendingAppIdRef.current = 'calendar';
+    }, 600); // Let home screen and dock/apps appear first
+    return () => clearTimeout(timer);
+  }, [isTourDeepLink, isLocked, activeAppId, pendingAppId]);
 
   // Cleanup welcome dialog timeout on unmount
   useEffect(() => {
