@@ -19,7 +19,7 @@ export function CalendarPlaceholder() {
 
   return (
     <div className="iphone-calendar">
-      <TitleBar title="Calendar" />
+      <TitleBar title="Tour Dates" />
       
       {/* Content Area - will be populated with List/Month views */}
       <div className="iphone-calendar-content">

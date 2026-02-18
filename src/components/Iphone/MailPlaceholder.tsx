@@ -47,7 +47,7 @@ export function MailPlaceholder() {
 
   return (
     <div className="iphone-mail">
-      <TitleBar title="Mail" />
+      <TitleBar title="E-mail List" />
       
       {/* Content Area */}
       <div className="iphone-mail-content">

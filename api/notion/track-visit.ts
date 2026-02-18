@@ -66,13 +66,19 @@ export default async function handler(
       isFirstVisit,
     });
 
-    // Query database to count existing visits
+    // Query database to count existing visits (paginate: Notion returns max 100 per request)
     let visitCount = 0;
     try {
-      const existingVisits = await notion.databases.query({
-        database_id: databaseId,
-      });
-      visitCount = existingVisits.results.length;
+      let cursor: string | undefined;
+      do {
+        const response = await notion.databases.query({
+          database_id: databaseId,
+          start_cursor: cursor,
+          page_size: 100,
+        });
+        visitCount += response.results.length;
+        cursor = response.has_more ? response.next_cursor ?? undefined : undefined;
+      } while (cursor);
     } catch (error) {
       console.warn('Could not count existing visits, starting from 1:', error);
       visitCount = 0;
@@ -84,115 +90,207 @@ export default async function handler(
     const visitNumber = visitCount + 1;
     const entryName = `Visit ${visitNumber} | ${monthYear}`;
 
+    // Extract query parameter from pageUrl and find matching Whos Account entry
+    let whosAccountRelation: { id: string }[] | undefined;
+    if (pageUrl) {
+      try {
+        const whosAccountDatabaseId = process.env.NOTION_WHOS_ACCOUNT_DATABASE_ID;
+        if (whosAccountDatabaseId) {
+          // Extract query parameter value (e.g., "675" from "oceanicofficial.com/merch?675")
+          let queryValue: string | null = null;
+          try {
+            const urlToParse = pageUrl.startsWith('http') ? pageUrl : `https://${pageUrl}`;
+            const urlObj = new URL(urlToParse);
+            
+            // Try to get first query parameter value
+            // Handle both ?675 (no key) and ?slug=675 formats
+            const searchParams = urlObj.searchParams;
+            if (searchParams.toString()) {
+              // If there are query params, get the first value
+              const firstKey = Array.from(searchParams.keys())[0];
+              queryValue = firstKey ? searchParams.get(firstKey) || firstKey : null;
+            } else if (urlObj.search && urlObj.search.startsWith('?')) {
+              // Handle case where URL ends with ?675 (no key-value pair)
+              queryValue = urlObj.search.substring(1); // Remove the ?
+            }
+          } catch (urlError) {
+            // If URL parsing fails, try to extract ?number pattern manually
+            const match = pageUrl.match(/\?(\d+)/);
+            if (match) {
+              queryValue = match[1];
+            }
+          }
+          
+          if (queryValue) {
+            // Format database ID with dashes if needed
+            let formattedWhosAccountId = whosAccountDatabaseId;
+            if (formattedWhosAccountId.length === 32 && !formattedWhosAccountId.includes('-')) {
+              formattedWhosAccountId = `${formattedWhosAccountId.slice(0, 8)}-${formattedWhosAccountId.slice(8, 12)}-${formattedWhosAccountId.slice(12, 16)}-${formattedWhosAccountId.slice(16, 20)}-${formattedWhosAccountId.slice(20)}`;
+            }
+
+            // Query Whos Account database to find matching slug
+            let cursor: string | undefined;
+            do {
+              const whosAccountResponse = await notion.databases.query({
+                database_id: formattedWhosAccountId,
+                start_cursor: cursor,
+                page_size: 100,
+              });
+
+              // Check each entry for matching slug
+              for (const entry of whosAccountResponse.results) {
+                const properties = (entry as any).properties;
+                const slugProperty = properties['Slug'] || properties['slug'];
+                
+                if (slugProperty) {
+                  // Handle different property types (rich_text, title, etc.)
+                  let slugValue = '';
+                  if (slugProperty.rich_text && slugProperty.rich_text.length > 0) {
+                    slugValue = slugProperty.rich_text[0].plain_text || '';
+                  } else if (slugProperty.title && slugProperty.title.length > 0) {
+                    slugValue = slugProperty.title[0].plain_text || '';
+                  } else if (slugProperty.plain_text) {
+                    slugValue = slugProperty.plain_text;
+                  }
+
+                  // Match slug (with or without ? prefix)
+                  const normalizedSlug = slugValue.replace(/^\?/, ''); // Remove leading ?
+                  if (normalizedSlug === queryValue || slugValue === `?${queryValue}` || slugValue === queryValue) {
+                    whosAccountRelation = [{ id: entry.id }];
+                    break;
+                  }
+                }
+              }
+
+              if (whosAccountRelation) break; // Found match, exit loop
+              
+              cursor = whosAccountResponse.has_more ? whosAccountResponse.next_cursor ?? undefined : undefined;
+            } while (cursor);
+          }
+        }
+      } catch (error) {
+        console.warn('Could not match Whos Account relation:', error);
+        // Continue without relation if matching fails
+      }
+    }
+
+    // Build properties object
+    const properties: any = {
+      'Name': {
+        title: [
+          {
+            text: {
+              content: entryName,
+            },
+          },
+        ],
+      },
+      'Timestamp': {
+        date: {
+          start: new Date().toISOString(),
+        },
+      },
+      'User Agent': {
+        rich_text: [
+          {
+            text: {
+              content: userAgent || '',
+            },
+          },
+        ],
+      },
+      'Referrer': {
+        url: referrer || null,
+      },
+      'Page URL': {
+        url: pageUrl || null,
+      },
+      'Screen Resolution': {
+        rich_text: [
+          {
+            text: {
+              content: screenResolution || '',
+            },
+          },
+        ],
+      },
+      'Viewport Size': {
+        rich_text: [
+          {
+            text: {
+              content: viewportSize || '',
+            },
+          },
+        ],
+      },
+      'Language': {
+        rich_text: [
+          {
+            text: {
+              content: language || '',
+            },
+          },
+        ],
+      },
+      'Timezone': {
+        rich_text: [
+          {
+            text: {
+              content: timezone || '',
+            },
+          },
+        ],
+      },
+      'Device Type': {
+        select: {
+          name: deviceType || 'Unknown',
+        },
+      },
+      'Browser': {
+        rich_text: [
+          {
+            text: {
+              content: browser || '',
+            },
+          },
+        ],
+      },
+      'OS': {
+        rich_text: [
+          {
+            text: {
+              content: os || '',
+            },
+          },
+        ],
+      },
+      'Session ID': {
+        rich_text: [
+          {
+            text: {
+              content: sessionId || '',
+            },
+          },
+        ],
+      },
+      'Is First Visit': {
+        checkbox: isFirstVisit || false,
+      },
+    };
+
+    // Add Whos Account relation if found
+    if (whosAccountRelation) {
+      properties['Whos account'] = {
+        relation: whosAccountRelation,
+      };
+    }
+
     // Create the page in Notion
     const response = await notion.pages.create({
       parent: {
         database_id: databaseId,
       },
-      properties: {
-        'Name': {
-          title: [
-            {
-              text: {
-                content: entryName,
-              },
-            },
-          ],
-        },
-        'Timestamp': {
-          date: {
-            start: new Date().toISOString(),
-          },
-        },
-        'User Agent': {
-          rich_text: [
-            {
-              text: {
-                content: userAgent || '',
-              },
-            },
-          ],
-        },
-        'Referrer': {
-          url: referrer || null,
-        },
-        'Page URL': {
-          url: pageUrl || null,
-        },
-        'Screen Resolution': {
-          rich_text: [
-            {
-              text: {
-                content: screenResolution || '',
-              },
-            },
-          ],
-        },
-        'Viewport Size': {
-          rich_text: [
-            {
-              text: {
-                content: viewportSize || '',
-              },
-            },
-          ],
-        },
-        'Language': {
-          rich_text: [
-            {
-              text: {
-                content: language || '',
-              },
-            },
-          ],
-        },
-        'Timezone': {
-          rich_text: [
-            {
-              text: {
-                content: timezone || '',
-              },
-            },
-          ],
-        },
-        'Device Type': {
-          select: {
-            name: deviceType || 'Unknown',
-          },
-        },
-        'Browser': {
-          rich_text: [
-            {
-              text: {
-                content: browser || '',
-              },
-            },
-          ],
-        },
-        'OS': {
-          rich_text: [
-            {
-              text: {
-                content: os || '',
-              },
-            },
-          ],
-        },
-        'Session ID': {
-          rich_text: [
-            {
-              text: {
-                content: sessionId || '',
-              },
-            },
-          ],
-        },
-        'Is First Visit': {
-          checkbox: isFirstVisit || false,
-        },
-        // Note: IP Address is available server-side but not included
-        // Add "IP Address" property to your Notion database if you want to track it
-      },
+      properties,
     });
 
     res.setHeader('Access-Control-Allow-Origin', '*');

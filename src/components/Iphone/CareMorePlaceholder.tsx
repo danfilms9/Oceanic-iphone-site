@@ -13,7 +13,7 @@ export function CareMorePlaceholder() {
           background: '#000'
         }}
         allowFullScreen
-        title="Care More"
+        title="CM Game"
       />
     </div>
   );

@@ -42,10 +42,11 @@ function getFrameScale(): number {
 function IphoneShellContent() {
   const location = useLocation();
   const isTourDeepLink = location.pathname === '/tour';
+  const isMerchDeepLink = location.pathname === '/merch';
   const { wallpaper } = useWallpaper();
   const { pause: pauseVisualizer, dispose: disposeVisualizer } = useVisualizer();
   const { isDetailView: isNotesDetailView } = useNotes();
-  const [isLocked, setIsLocked] = useState(!isTourDeepLink);
+  const [isLocked, setIsLocked] = useState(!(isTourDeepLink || isMerchDeepLink));
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [time, setTime] = useState(formatTime);
@@ -60,6 +61,7 @@ function IphoneShellContent() {
   const [pendingAppId, setPendingAppId] = useState<string | null>(null);
   const pendingAppIdRef = useRef<string | null>(null);
   const tourDeepLinkAppliedRef = useRef(false);
+  const merchDeepLinkAppliedRef = useRef(false);
   const [isAppClosing, setIsAppClosing] = useState(false);
   const appViewRef = useRef<HTMLDivElement | null>(null);
   const closeAppTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -170,6 +172,18 @@ function IphoneShellContent() {
     return () => clearTimeout(timer);
   }, [isTourDeepLink, isLocked, activeAppId, pendingAppId]);
 
+  // Deep link: /merch → open merch app once after home screen is visible (same behavior as /tour)
+  useEffect(() => {
+    if (!isMerchDeepLink || isLocked || activeAppId || pendingAppId || merchDeepLinkAppliedRef.current) return;
+    merchDeepLinkAppliedRef.current = true;
+    const timer = setTimeout(() => {
+      setShouldAnimateOut(true);
+      setPendingAppId('merch');
+      pendingAppIdRef.current = 'merch';
+    }, 600); // Let home screen and dock/apps appear first
+    return () => clearTimeout(timer);
+  }, [isMerchDeepLink, isLocked, activeAppId, pendingAppId]);
+
   // Cleanup welcome dialog timeout on unmount
   useEffect(() => {
     return () => {
@@ -248,10 +262,10 @@ function IphoneShellContent() {
       >
         <div className="iphone-frame">
         <div className="iphone-screen">
-          {/* Shared wallpaper */}
+          {/* Shared wallpaper (lock screen and home screen; blurred/darkened on home) */}
           <div 
-            className="iphone-wallpaper" 
-            style={isLocked 
+            className={`iphone-wallpaper ${!isLocked ? 'iphone-wallpaper-home' : ''}`}
+            style={wallpaper 
               ? { backgroundImage: `url(${wallpaper})` }
               : { backgroundColor: '#000' }
             } 

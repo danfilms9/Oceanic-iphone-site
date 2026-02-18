@@ -11,10 +11,55 @@
  * The server will run on http://localhost:3001
  */
 
+const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const { Client } = require('@notionhq/client');
-require('dotenv').config();
+
+// Load .env from multiple locations so it works no matter where you run from
+const dotenv = require('dotenv');
+const envCandidates = [
+  path.resolve(__dirname, '.env'),                              // next to this file (server-example)
+  path.resolve(__dirname, '..', '.env'),                        // visualizer-desktop root
+  path.resolve(process.cwd(), '.env'),                          // current working directory
+  path.resolve(process.cwd(), 'server-example', '.env'),        // cwd = visualizer-desktop
+  path.resolve(process.cwd(), 'visualizer-desktop', 'server-example', '.env'), // cwd = repo root
+];
+let loadedPath = null;
+for (const p of envCandidates) {
+  if (fs.existsSync(p)) {
+    dotenv.config({ path: p });
+    loadedPath = p;
+    break;
+  }
+}
+if (!loadedPath) dotenv.config();
+
+// Fallback: if Shopify vars missing, parse .env file directly (handles encoding/quirks)
+if ((!process.env.SHOPIFY_STORE_DOMAIN || !process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN) && loadedPath) {
+  try {
+    let raw = fs.readFileSync(loadedPath, 'utf8');
+    if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+    for (const line of raw.split(/\r?\n/)) {
+      const trimVal = (s) => (s || '').replace(/\s*#.*$/, '').replace(/^["']|["']$/g, '').trim();
+      if (line.startsWith('SHOPIFY_STORE_DOMAIN=')) {
+        process.env.SHOPIFY_STORE_DOMAIN = trimVal(line.slice(line.indexOf('=') + 1));
+      }
+      if (line.startsWith('SHOPIFY_STOREFRONT_ACCESS_TOKEN=')) {
+        process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN = trimVal(line.slice(line.indexOf('=') + 1));
+      }
+    }
+  } catch (e) {
+    console.warn('Could not fallback-parse .env for Shopify:', e.message);
+  }
+}
+
+const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN;
+const shopifyToken = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN;
+console.log('Env loaded from:', loadedPath || '(default search)', loadedPath ? '(file exists)' : '');
+console.log('Shopify SHOPIFY_STORE_DOMAIN:', shopifyDomain ? `${shopifyDomain.slice(0, 20)}...` : 'NOT SET');
+console.log('Shopify SHOPIFY_STOREFRONT_ACCESS_TOKEN:', shopifyToken ? 'SET (hidden)' : 'NOT SET');
 
 const app = express();
 app.use(cors());
@@ -235,6 +280,156 @@ app.post('/api/notion/email-entries', async (req, res) => {
   }
 });
 
+// Track page visit (Notion visits database)
+app.post('/api/notion/track-visit', async (req, res) => {
+  try {
+    const notionApiKey = process.env.NOTION_API_KEY;
+    let databaseId = process.env.NOTION_VISITS_DATABASE_ID;
+
+    if (!notionApiKey || !databaseId) {
+      return res.status(200).json({ success: false, skipped: true });
+    }
+
+    if (databaseId.length === 32 && !databaseId.includes('-')) {
+      databaseId = `${databaseId.slice(0, 8)}-${databaseId.slice(8, 12)}-${databaseId.slice(12, 16)}-${databaseId.slice(16, 20)}-${databaseId.slice(20)}`;
+    }
+
+    const body = req.body || {};
+    // Count all visits with pagination (Notion returns max 100 per request)
+    let visitCount = 0;
+    let cursor;
+    do {
+      const response = await notion.databases.query({
+        database_id: databaseId,
+        start_cursor: cursor,
+        page_size: 100,
+      });
+      visitCount += response.results.length;
+      cursor = response.has_more ? response.next_cursor : undefined;
+    } while (cursor);
+    const now = new Date();
+    const monthYear = now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const entryName = `Visit ${visitCount + 1} | ${monthYear}`;
+
+    // Extract query parameter from pageUrl and find matching Whos Account entry
+    let whosAccountRelation = null;
+    if (body.pageUrl) {
+      try {
+        const whosAccountDatabaseId = process.env.NOTION_WHOS_ACCOUNT_DATABASE_ID;
+        if (whosAccountDatabaseId) {
+          // Extract query parameter value (e.g., "675" from "oceanicofficial.com/merch?675")
+          let queryValue = null;
+          try {
+            const urlToParse = body.pageUrl.startsWith('http') ? body.pageUrl : `https://${body.pageUrl}`;
+            const urlObj = new URL(urlToParse);
+            
+            // Try to get first query parameter value
+            // Handle both ?675 (no key) and ?slug=675 formats
+            const searchParams = urlObj.searchParams;
+            if (searchParams.toString()) {
+              // If there are query params, get the first value
+              const firstKey = Array.from(searchParams.keys())[0];
+              queryValue = firstKey ? searchParams.get(firstKey) || firstKey : null;
+            } else if (urlObj.search && urlObj.search.startsWith('?')) {
+              // Handle case where URL ends with ?675 (no key-value pair)
+              queryValue = urlObj.search.substring(1); // Remove the ?
+            }
+          } catch (urlError) {
+            // If URL parsing fails, try to extract ?number pattern manually
+            const match = body.pageUrl.match(/\?(\d+)/);
+            if (match) {
+              queryValue = match[1];
+            }
+          }
+          
+          if (queryValue) {
+            // Format database ID with dashes if needed
+            let formattedWhosAccountId = whosAccountDatabaseId;
+            if (formattedWhosAccountId.length === 32 && !formattedWhosAccountId.includes('-')) {
+              formattedWhosAccountId = `${formattedWhosAccountId.slice(0, 8)}-${formattedWhosAccountId.slice(8, 12)}-${formattedWhosAccountId.slice(12, 16)}-${formattedWhosAccountId.slice(16, 20)}-${formattedWhosAccountId.slice(20)}`;
+            }
+
+            // Query Whos Account database to find matching slug
+            let cursor;
+            do {
+              const whosAccountResponse = await notion.databases.query({
+                database_id: formattedWhosAccountId,
+                start_cursor: cursor,
+                page_size: 100,
+              });
+
+              // Check each entry for matching slug
+              for (const entry of whosAccountResponse.results) {
+                const properties = entry.properties;
+                const slugProperty = properties['Slug'] || properties['slug'];
+                
+                if (slugProperty) {
+                  // Handle different property types (rich_text, title, etc.)
+                  let slugValue = '';
+                  if (slugProperty.rich_text && slugProperty.rich_text.length > 0) {
+                    slugValue = slugProperty.rich_text[0].plain_text || '';
+                  } else if (slugProperty.title && slugProperty.title.length > 0) {
+                    slugValue = slugProperty.title[0].plain_text || '';
+                  } else if (slugProperty.plain_text) {
+                    slugValue = slugProperty.plain_text;
+                  }
+
+                  // Match slug (with or without ? prefix)
+                  const normalizedSlug = slugValue.replace(/^\?/, ''); // Remove leading ?
+                  if (normalizedSlug === queryValue || slugValue === `?${queryValue}` || slugValue === queryValue) {
+                    whosAccountRelation = [{ id: entry.id }];
+                    break;
+                  }
+                }
+              }
+
+              if (whosAccountRelation) break; // Found match, exit loop
+              
+              cursor = whosAccountResponse.has_more ? whosAccountResponse.next_cursor : undefined;
+            } while (cursor);
+          }
+        }
+      } catch (error) {
+        console.warn('Could not match Whos Account relation:', error);
+        // Continue without relation if matching fails
+      }
+    }
+
+    // Build properties object
+    const properties = {
+      'Name': { title: [{ text: { content: entryName } }] },
+      'Timestamp': { date: { start: now.toISOString() } },
+      'User Agent': { rich_text: [{ text: { content: body.userAgent || '' } }] },
+      'Referrer': { url: body.referrer || null },
+      'Page URL': { url: body.pageUrl || null },
+      'Screen Resolution': { rich_text: [{ text: { content: body.screenResolution || '' } }] },
+      'Viewport Size': { rich_text: [{ text: { content: body.viewportSize || '' } }] },
+      'Language': { rich_text: [{ text: { content: body.language || '' } }] },
+      'Timezone': { rich_text: [{ text: { content: body.timezone || '' } }] },
+      'Device Type': { select: { name: body.deviceType || 'Unknown' } },
+      'Browser': { rich_text: [{ text: { content: body.browser || '' } }] },
+      'OS': { rich_text: [{ text: { content: body.os || '' } }] },
+      'Session ID': { rich_text: [{ text: { content: body.sessionId || '' } }] },
+      'Is First Visit': { checkbox: !!body.isFirstVisit },
+    };
+
+    // Add Whos Account relation if found
+    if (whosAccountRelation) {
+      properties['Whos account'] = { relation: whosAccountRelation };
+    }
+
+    await notion.pages.create({
+      parent: { database_id: databaseId },
+      properties,
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Track visit error:', error);
+    res.status(500).json({ error: 'Failed to track visit', message: error.message });
+  }
+});
+
 // Get YouTube video metadata (title, views, likes, etc.)
 // Uses oEmbed API (no key required) for basic info
 // Optionally uses YouTube Data API v3 (with key) for detailed stats
@@ -336,6 +531,355 @@ app.get('/api/youtube/metadata', async (req, res) => {
   }
 });
 
+// Shopify Storefront API: fetch products for Merch app
+app.get('/api/shopify/products', async (req, res) => {
+  console.log('[API] GET /api/shopify/products requested');
+  try {
+    const storeDomain = (process.env.SHOPIFY_STORE_DOMAIN || '').trim();
+    const accessToken = (process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || '').trim();
+    console.log('[API] storeDomain:', storeDomain || '(empty)', 'token set:', !!accessToken);
+
+    if (!storeDomain || !accessToken) {
+      console.log('[API] missing config, returning empty products');
+      return res.status(200).json({ products: [] });
+    }
+
+    const query = `
+      query getProducts($first: Int!) {
+        products(first: $first) {
+          edges {
+            node {
+              id
+              title
+              description
+              featuredImage { url }
+              media(first: 20) {
+                edges {
+                  node {
+                    mediaContentType
+                    ... on MediaImage {
+                      image { url }
+                    }
+                    ... on Video {
+                      sources {
+                        url
+                        mimeType
+                      }
+                    }
+                    ... on ExternalVideo {
+                      embedUrl
+                    }
+                  }
+                }
+              }
+              variants(first: 25) {
+                edges {
+                  node {
+                    id
+                    price {
+                      amount
+                      currencyCode
+                    }
+                    selectedOptions {
+                      name
+                      value
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const apiVersions = ['2024-01', '2023-10'];
+    let response;
+    let json = {};
+    let shopifyUrl;
+    let lastStatus;
+    for (const version of apiVersions) {
+      shopifyUrl = `https://${storeDomain}/api/${version}/graphql.json`;
+      console.log('[API] calling Shopify:', shopifyUrl);
+      const headers = {
+        'Content-Type': 'application/json',
+        'Shopify-Storefront-Private-Token': accessToken,
+      };
+      const buyerIp = req.ip || req.get('x-forwarded-for') || req.get('x-real-ip') || '';
+      if (buyerIp) headers['Shopify-Storefront-Buyer-IP'] = buyerIp.split(',')[0].trim();
+      response = await fetch(shopifyUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ query, variables: { first: 50 } }),
+      });
+      json = await response.json().catch(() => ({}));
+      lastStatus = response.status;
+      console.log('[API] Shopify response status:', response.status, 'data present:', !!json.data, 'errors:', json.errors?.length ?? 0, json.errors ? json.errors.map((e) => e.message) : '');
+      if (response.ok && (!json.errors || json.errors.length === 0)) break;
+      if (response.status !== 404 && response.status !== 422) break;
+    }
+
+    if (!response.ok) {
+      const msg = json.errors ? json.errors.map((e) => e.message).join('; ') : response.statusText;
+      console.error('[API] Shopify products error:', lastStatus, msg);
+      if (lastStatus === 401) {
+        console.error('[API] 401 = Unauthorized. Use the Storefront API *private* token from: Settings > Apps and sales channels > Develop apps > [Your app] > API credentials > Storefront API. Ensure the app is installed on the store.');
+      }
+      console.log('[API] returning 0 products (reason: Shopify responded', lastStatus, ')');
+      return res.status(200).json({ products: [] });
+    }
+
+    if (json.errors && json.errors.length) {
+      console.error('[API] Shopify GraphQL errors:', json.errors);
+      console.log('[API] returning 0 products (reason: GraphQL errors)');
+      return res.status(200).json({ products: [] });
+    }
+
+    const edges = json.data?.products?.edges ?? [];
+    console.log('[API] Shopify edges count:', edges.length);
+    if (edges.length === 0) {
+      console.log('[API] returning 0 products (reason: store has no products or none published to the sales channel)');
+    }
+    const products = edges.map(({ node }) => {
+      const variantEdges = node.variants?.edges ?? [];
+      const variants = variantEdges.map(({ node: v }) => ({
+        id: v.id,
+        price: v.price
+          ? `${v.price.currencyCode} ${Number(v.price.amount).toFixed(2)}`
+          : '',
+        selectedOptions: (v.selectedOptions || []).map((o) => ({ name: o.name, value: o.value })),
+      }));
+      const firstVariant = variantEdges[0]?.node;
+      const price = firstVariant?.price
+        ? `${firstVariant.price.currencyCode} ${Number(firstVariant.price.amount).toFixed(2)}`
+        : '';
+      const mediaEdges = node.media?.edges ?? [];
+      const productMedia = [];
+      let imageUrl = node.featuredImage?.url ?? null;
+      for (const { node: m } of mediaEdges) {
+        if (m.mediaContentType === 'VIDEO' && m.sources?.length) {
+          productMedia.push({ type: 'video', url: m.sources[0].url, videoIsEmbed: false });
+        } else if (m.mediaContentType === 'EXTERNAL_VIDEO' && m.embedUrl) {
+          productMedia.push({ type: 'video', url: m.embedUrl, videoIsEmbed: true });
+        } else if (m.mediaContentType === 'IMAGE' && m.image?.url) {
+          productMedia.push({ type: 'image', url: m.image.url });
+          if (!imageUrl) imageUrl = m.image.url;
+        }
+      }
+      if (!imageUrl && node.featuredImage?.url) imageUrl = node.featuredImage.url;
+      const firstVideo = productMedia.find((s) => s.type === 'video');
+      return {
+        id: node.id,
+        name: node.title,
+        description: node.description ?? null,
+        price,
+        imageUrl,
+        videoUrl: firstVideo ? firstVideo.url : null,
+        videoIsEmbed: firstVideo ? !!firstVideo.videoIsEmbed : undefined,
+        productMedia: productMedia.length > 0 ? productMedia : undefined,
+        variantId: firstVariant?.id ?? null,
+        variants: variants.length > 0 ? variants : undefined,
+      };
+    });
+
+    console.log('Shopify products:', products.length, 'loaded for', storeDomain);
+    res.json({ products });
+  } catch (error) {
+    console.error('[API] Shopify products error:', error.message);
+    console.log('[API] returning 0 products (reason: exception)', error.message);
+    res.status(200).json({ products: [] });
+  }
+});
+
+// Helper: run Shopify Storefront GraphQL (mutation or query)
+async function shopifyGraphQL(req, query, variables = {}) {
+  const storeDomain = (process.env.SHOPIFY_STORE_DOMAIN || '').trim();
+  const accessToken = (process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || '').trim();
+  if (!storeDomain || !accessToken) return { ok: false, json: {} };
+  const shopifyUrl = `https://${storeDomain}/api/2024-01/graphql.json`;
+  const headers = {
+    'Content-Type': 'application/json',
+    'Shopify-Storefront-Private-Token': accessToken,
+  };
+  const buyerIp = req.ip || req.get('x-forwarded-for') || req.get('x-real-ip') || '';
+  if (buyerIp) headers['Shopify-Storefront-Buyer-IP'] = buyerIp.split(',')[0].trim();
+  const response = await fetch(shopifyUrl, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ query, variables }),
+  });
+  const json = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, json };
+}
+
+// POST /api/shopify/cart – create cart or add line. Body: { cartId?, variantId, quantity }
+app.post('/api/shopify/cart', async (req, res) => {
+  try {
+    const { cartId, variantId, quantity = 1 } = req.body || {};
+    if (!variantId || typeof quantity !== 'number' || quantity < 1) {
+      return res.status(400).json({ error: 'variantId and quantity (>= 1) required' });
+    }
+    const lines = [{ merchandiseId: variantId, quantity }];
+
+    if (cartId) {
+      const mutation = `
+        mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
+          cartLinesAdd(cartId: $cartId, lines: $lines) {
+            cart { id checkoutUrl }
+            userErrors { message field }
+          }
+        }
+      `;
+      const { ok, json } = await shopifyGraphQL(req, mutation, { cartId, lines });
+      if (!ok) return res.status(502).json({ error: 'Shopify request failed', details: json.errors });
+      const payload = json.data?.cartLinesAdd;
+      const userErrors = payload?.userErrors || [];
+      if (userErrors.length) return res.status(400).json({ error: userErrors.map((e) => e.message).join('; ') });
+      const cart = payload?.cart;
+      if (!cart) return res.status(502).json({ error: 'No cart returned' });
+      return res.json({ cartId: cart.id, checkoutUrl: cart.checkoutUrl });
+    }
+
+    const mutation = `
+      mutation cartCreate($input: CartInput!) {
+        cartCreate(input: $input) {
+          cart { id checkoutUrl }
+          userErrors { message field }
+        }
+      }
+    `;
+    const { ok, json } = await shopifyGraphQL(req, mutation, { input: { lines } });
+    if (!ok) return res.status(502).json({ error: 'Shopify request failed', details: json.errors });
+    const payload = json.data?.cartCreate;
+    const userErrors = payload?.userErrors || [];
+    if (userErrors.length) return res.status(400).json({ error: userErrors.map((e) => e.message).join('; ') });
+    const cart = payload?.cart;
+    if (!cart) return res.status(502).json({ error: 'No cart returned' });
+    return res.json({ cartId: cart.id, checkoutUrl: cart.checkoutUrl });
+  } catch (error) {
+    console.error('[API] Shopify cart error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/shopify/cart/remove – remove line(s) from cart. Body: { cartId, lineIds: [id, ...] }
+app.post('/api/shopify/cart/remove', async (req, res) => {
+  try {
+    const { cartId, lineIds } = req.body || {};
+    if (!cartId || !Array.isArray(lineIds) || lineIds.length === 0) {
+      return res.status(400).json({ error: 'cartId and lineIds (non-empty array) required' });
+    }
+    const mutation = `
+      mutation cartLinesRemove($cartId: ID!, $lineIds: [ID!]!) {
+        cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
+          cart { id checkoutUrl }
+          userErrors { message field }
+        }
+      }
+    `;
+    const { ok, json } = await shopifyGraphQL(req, mutation, { cartId, lineIds });
+    if (!ok) return res.status(502).json({ error: 'Shopify request failed', details: json.errors });
+    const payload = json.data?.cartLinesRemove;
+    const userErrors = payload?.userErrors || [];
+    if (userErrors.length) return res.status(400).json({ error: userErrors.map((e) => e.message).join('; ') });
+    const cart = payload?.cart;
+    if (!cart) return res.status(502).json({ error: 'No cart returned' });
+    return res.json({ cartId: cart.id, checkoutUrl: cart.checkoutUrl });
+  } catch (error) {
+    console.error('[API] Shopify cart remove error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/shopify/cart/update – update line quantity. Body: { cartId, lines: [{ id, quantity }] }
+app.post('/api/shopify/cart/update', async (req, res) => {
+  try {
+    const { cartId, lines } = req.body || {};
+    if (!cartId || !Array.isArray(lines) || lines.length === 0) {
+      return res.status(400).json({ error: 'cartId and lines (non-empty array of { id, quantity }) required' });
+    }
+    const mutation = `
+      mutation cartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
+        cartLinesUpdate(cartId: $cartId, lines: $lines) {
+          cart { id checkoutUrl }
+          userErrors { message field }
+        }
+      }
+    `;
+    const { ok, json } = await shopifyGraphQL(req, mutation, { cartId, lines });
+    if (!ok) return res.status(502).json({ error: 'Shopify request failed', details: json.errors });
+    const payload = json.data?.cartLinesUpdate;
+    const userErrors = payload?.userErrors || [];
+    if (userErrors.length) return res.status(400).json({ error: userErrors.map((e) => e.message).join('; ') });
+    const cart = payload?.cart;
+    if (!cart) return res.status(502).json({ error: 'No cart returned' });
+    return res.json({ cartId: cart.id, checkoutUrl: cart.checkoutUrl });
+  } catch (error) {
+    console.error('[API] Shopify cart update error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/shopify/cart?cartId=... – get cart for display
+app.get('/api/shopify/cart', async (req, res) => {
+  try {
+    const cartId = (req.query.cartId || '').trim();
+    if (!cartId) return res.status(400).json({ error: 'cartId required' });
+    const query = `
+      query getCart($cartId: ID!) {
+        cart(id: $cartId) {
+          id
+          checkoutUrl
+          lines(first: 50) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                    image { url }
+                    product { id title }
+                    price { amount currencyCode }
+                  }
+                }
+              }
+            }
+          }
+          cost { subtotalAmount { amount currencyCode } }
+        }
+      }
+    `;
+    const { ok, json } = await shopifyGraphQL(req, query, { cartId });
+    if (!ok) return res.status(502).json({ error: 'Shopify request failed', details: json.errors });
+    const cart = json.data?.cart;
+    if (!cart) return res.status(404).json({ error: 'Cart not found' });
+    const lines = (cart.lines?.edges || []).map(({ node }) => ({
+      id: node.id,
+      quantity: node.quantity,
+      title: node.merchandise?.product?.title ?? node.merchandise?.title ?? 'Item',
+      variantTitle: node.merchandise?.title,
+      imageUrl: node.merchandise?.image?.url ?? null,
+      price: node.merchandise?.price
+        ? `${node.merchandise.price.currencyCode} ${Number(node.merchandise.price.amount).toFixed(2)}`
+        : '',
+      productId: node.merchandise?.product?.id ?? null,
+    }));
+    return res.json({
+      cartId: cart.id,
+      checkoutUrl: cart.checkoutUrl,
+      lines,
+      subtotal: cart.cost?.subtotalAmount
+        ? `${cart.cost.subtotalAmount.currencyCode} ${Number(cart.cost.subtotalAmount.amount).toFixed(2)}`
+        : '',
+    });
+  } catch (error) {
+    console.error('[API] Shopify cart get error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Notion proxy server running on http://localhost:${PORT}`);
@@ -346,4 +890,5 @@ app.listen(PORT, () => {
   console.log(`📇 Contact Database ID: ${process.env.NOTION_CONTACT_DATABASE_ID || '2f177e8e8c0880ddb89ee26660263f3a (hardcoded)'}`);
   console.log(`📄 About Database ID: ${process.env.NOTION_ABOUT_DATABASE_ID || '2f177e8e8c088005954fc4434d81aa21 (hardcoded)'}`);
   console.log(`🎬 YouTube API Key: ${process.env.YOUTUBE_API_KEY ? 'Configured (enhanced stats enabled)' : 'NOT SET (using oEmbed - basic info only)'}`);
+  console.log(`🛒 Shopify: ${process.env.SHOPIFY_STORE_DOMAIN && process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN ? 'Configured (Merch products from Shopify)' : 'NOT SET (Merch uses test data)'}`);
 });

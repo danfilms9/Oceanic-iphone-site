@@ -52,62 +52,78 @@ export default async function handler(
       duration: '0:00',
     };
 
-    // If YouTube Data API key is available, enhance with detailed stats
-    const youtubeApiKey = process.env.YOUTUBE_API_KEY;
+    // YouTube Data API v3 is required for view counts, likes, and duration.
+    // Set YOUTUBE_API_KEY in your Vercel project (Environment Variables) for the deployed site.
+    const youtubeApiKey =
+      process.env.YOUTUBE_API_KEY || process.env.GOOGLE_API_KEY;
     if (youtubeApiKey) {
       try {
         const youtubeResponse = await fetch(
           `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${youtubeApiKey}&part=snippet,statistics,contentDetails`
         );
 
-        if (youtubeResponse.ok) {
-          const youtubeData = await youtubeResponse.json();
+        const youtubeData = await youtubeResponse.json();
 
-          if (youtubeData.items && youtubeData.items.length > 0) {
-            const item = youtubeData.items[0];
-            const statistics = item.statistics;
-            const contentDetails = item.contentDetails;
+        if (youtubeResponse.ok && youtubeData.items?.length > 0) {
+          const item = youtubeData.items[0];
+          const statistics = item.statistics || {};
+          const contentDetails = item.contentDetails || {};
+          const viewCount = parseInt(
+            String(statistics.viewCount ?? 0),
+            10
+          );
+          const likeCount = parseInt(
+            String(statistics.likeCount ?? 0),
+            10
+          );
+          const likePercentage =
+            viewCount > 0 ? Math.round((likeCount / viewCount) * 100) : 0;
 
-            // Parse duration (ISO 8601 format: PT1H2M10S)
-            const durationMatch = contentDetails.duration.match(
+          let duration = '0:00';
+          const durationRaw = contentDetails.duration;
+          if (durationRaw && typeof durationRaw === 'string') {
+            const durationMatch = durationRaw.match(
               /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/
             );
             let durationSeconds = 0;
             if (durationMatch) {
-              durationSeconds += parseInt(durationMatch[1] || '0') * 3600;
-              durationSeconds += parseInt(durationMatch[2] || '0') * 60;
-              durationSeconds += parseInt(durationMatch[3] || '0');
+              durationSeconds += parseInt(durationMatch[1] || '0', 10) * 3600;
+              durationSeconds += parseInt(durationMatch[2] || '0', 10) * 60;
+              durationSeconds += parseInt(durationMatch[3] || '0', 10);
             }
-
             const hours = Math.floor(durationSeconds / 3600);
             const minutes = Math.floor((durationSeconds % 3600) / 60);
             const seconds = durationSeconds % 60;
-            const duration =
+            duration =
               hours > 0
                 ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
                 : `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-            // Calculate like percentage
-            const likeCount = parseInt(statistics.likeCount || '0');
-            const viewCount = parseInt(statistics.viewCount || '0');
-            const likePercentage =
-              viewCount > 0 ? Math.round((likeCount / viewCount) * 100) : 0;
-
-            // Enhance base response with detailed stats
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-            return res.status(200).json({
-              ...baseResponse,
-              viewCount: viewCount,
-              likePercentage: likePercentage,
-              duration: duration,
-            });
           }
+
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+          return res.status(200).json({
+            ...baseResponse,
+            viewCount,
+            likePercentage,
+            duration,
+          });
+        }
+
+        if (!youtubeResponse.ok && youtubeData?.error) {
+          console.warn(
+            'YouTube Data API error:',
+            youtubeData.error.code,
+            youtubeData.error.message
+          );
         }
       } catch (youtubeError) {
-        console.warn('YouTube Data API error, using oEmbed data only:', youtubeError);
+        console.warn(
+          'YouTube Data API error, using oEmbed data only:',
+          youtubeError
+        );
       }
     }
 
