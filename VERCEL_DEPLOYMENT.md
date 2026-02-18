@@ -83,6 +83,13 @@ This guide will help you deploy your HoldMe Visualizer to Vercel and configure N
    YOUTUBE_API_KEY=your_youtube_api_key (optional, for enhanced stats)
    ```
 
+   **Shopify (for Merch app):**
+   ```
+   SHOPIFY_STORE_DOMAIN=your-store.myshopify.com
+   SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_storefront_access_token_here
+   ```
+   See `docs/SHOPIFY_MERCH.md` for detailed setup instructions.
+
    - Make sure to add these for **Production**, **Preview**, and **Development** environments
    - Click "Save" after adding each variable
 
@@ -95,7 +102,7 @@ This guide will help you deploy your HoldMe Visualizer to Vercel and configure N
 
 1. **Check your site:**
    - Visit your Vercel deployment URL
-   - Test the calendar, notes, YouTube, and other features
+   - Test the calendar, notes, YouTube, merch app, and other features
 
 2. **Check serverless function logs:**
    - Go to your Vercel project → Functions tab
@@ -109,6 +116,14 @@ This guide will help you deploy your HoldMe Visualizer to Vercel and configure N
 - **Check function logs:** Go to Vercel dashboard → Your project → Functions → View logs
 - **Verify database IDs:** Make sure database IDs are correct (32 characters, with or without dashes)
 - **Check integration connection:** Ensure your Notion integration is connected to all databases
+
+### Merch Items Not Loading
+
+- **Check Shopify environment variables:** Ensure `SHOPIFY_STORE_DOMAIN` and `SHOPIFY_STOREFRONT_ACCESS_TOKEN` are set in Vercel
+- **Verify Shopify token:** Use the **private** Storefront API token from the Headless channel (not a custom app token)
+- **Check function logs:** Look for Shopify API errors in the Functions tab
+- **Test API endpoint:** Visit `https://your-site.vercel.app/api/shopify/products` to see if products are returned
+- **Verify products exist:** Ensure products are published to your store's sales channel
 
 ### CORS Errors
 
