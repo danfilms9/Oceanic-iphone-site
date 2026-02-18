@@ -106,10 +106,21 @@ export default async function handler(
             
             // Strategy 1: Check hash fragment FIRST (Instagram preserves these best)
             // Example: ?fbclid=...&#675 -> extracts "675"
+            // Try both urlObj.hash and direct string matching for robustness
             if (urlObj.hash) {
+              // urlObj.hash includes the # symbol, so #675 becomes "#675"
               const hashMatch = urlObj.hash.match(/#(\d+)/);
               if (hashMatch) {
                 queryValue = hashMatch[1];
+                console.log('Extracted tracking code from hash fragment (urlObj.hash):', queryValue);
+              }
+            }
+            // Fallback: also check the raw pageUrl string in case hash wasn't parsed correctly
+            if (!queryValue && pageUrl.includes('#')) {
+              const directHashMatch = pageUrl.match(/#(\d+)/);
+              if (directHashMatch) {
+                queryValue = directHashMatch[1];
+                console.log('Extracted tracking code from hash fragment (direct string match):', queryValue);
               }
             }
             
@@ -163,6 +174,7 @@ export default async function handler(
           }
           
           if (queryValue) {
+            console.log(`🔍 Looking for tracking code "${queryValue}" in Whos Account database`);
             // Format database ID with dashes if needed
             let formattedWhosAccountId = whosAccountDatabaseId;
             if (formattedWhosAccountId.length === 32 && !formattedWhosAccountId.includes('-')) {
@@ -194,11 +206,24 @@ export default async function handler(
                     slugValue = slugProperty.plain_text;
                   }
 
-                  // Match slug (with or without ? prefix)
+                  // Match slug (with or without ? prefix, handle both ?675 and 675 formats)
                   const normalizedSlug = slugValue.replace(/^\?/, ''); // Remove leading ?
-                  if (normalizedSlug === queryValue || slugValue === `?${queryValue}` || slugValue === queryValue) {
+                  const normalizedQueryValue = String(queryValue).trim(); // Ensure it's a string and trimmed
+                  
+                  // Try multiple matching strategies
+                  const matches = 
+                    normalizedSlug === normalizedQueryValue ||  // "675" === "675"
+                    slugValue === `?${normalizedQueryValue}` ||  // "?675" === "?675"
+                    slugValue === normalizedQueryValue ||        // "675" === "675" (if slug stored without ?)
+                    normalizedSlug === `?${normalizedQueryValue}` || // "675" === "?675" (edge case)
+                    slugValue.replace(/^[?#]/, '') === normalizedQueryValue; // Remove both ? and # prefixes
+                  
+                  if (matches) {
+                    console.log(`✅ Matched tracking code "${queryValue}" to slug "${slugValue}" (normalized: "${normalizedSlug}")`);
                     whosAccountRelation = [{ id: entry.id }];
                     break;
+                  } else {
+                    console.log(`❌ No match: queryValue="${queryValue}", slugValue="${slugValue}", normalizedSlug="${normalizedSlug}"`);
                   }
                 }
               }
@@ -208,11 +233,15 @@ export default async function handler(
               cursor = whosAccountResponse.has_more ? whosAccountResponse.next_cursor ?? undefined : undefined;
             } while (cursor);
           }
+        } else {
+          console.log('⚠️ No tracking code found in pageUrl:', pageUrl);
         }
       } catch (error) {
         console.warn('Could not match Whos Account relation:', error);
         // Continue without relation if matching fails
       }
+    } else {
+      console.log('⚠️ No pageUrl provided for tracking');
     }
 
     // Build properties object
