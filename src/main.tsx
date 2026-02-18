@@ -25,7 +25,34 @@ window.addEventListener('error', (event) => {
 });
 
 // Disable pull-to-refresh on mobile
-// Prevent touchmove when at the top of the page to avoid accidental refresh
+// Prevent touchmove when at the top of the page to avoid accidental refresh.
+// Do NOT prevent when the user is touching inside a scrollable container (e.g. merch list),
+// so that in-app scroll works in both directions.
+function isInsideScrollableElement(el: EventTarget | null): boolean {
+  if (!el || !(el instanceof Node)) return false;
+  let node: Node | null = el as Node;
+  while (node && node !== document.body) {
+    if (node instanceof Element) {
+      const style = window.getComputedStyle(node);
+      const overflowY = style.overflowY;
+      const overflowX = style.overflowX;
+      const canScrollY = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+      const canScrollX = overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'overlay';
+      if (canScrollY || canScrollX) {
+        const scrollHeight = node.scrollHeight;
+        const clientHeight = node.clientHeight;
+        const scrollWidth = node.scrollWidth;
+        const clientWidth = node.clientWidth;
+        const scrollableY = canScrollY && scrollHeight > clientHeight;
+        const scrollableX = canScrollX && scrollWidth > clientWidth;
+        if (scrollableY || scrollableX) return true;
+      }
+    }
+    node = node.parentNode;
+  }
+  return false;
+}
+
 let touchStartY = 0;
 let touchStartX = 0;
 
@@ -35,11 +62,15 @@ document.addEventListener('touchstart', (e) => {
 }, { passive: true });
 
 document.addEventListener('touchmove', (e) => {
+  // Never block touchmove when the user is scrolling inside a scrollable area (e.g. merch list).
+  // This fixes mobile scroll-up not working because the global handler was affecting inner scroll.
+  if (isInsideScrollableElement(e.target)) return;
+
   const touchY = e.touches[0].clientY;
   const touchX = e.touches[0].clientX;
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  
-  // If we're at the top of the page and user is trying to scroll down, prevent it
+
+  // If we're at the top of the page and user is trying to scroll down, prevent it (pull-to-refresh)
   if (scrollTop === 0 && touchY > touchStartY && Math.abs(touchY - touchStartY) > Math.abs(touchX - touchStartX)) {
     e.preventDefault();
   }

@@ -4844,6 +4844,10 @@ a.iphone-settings-option {
 .iphone-merch .iphone-calendar-content {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
+  /* Ensure vertical touch scroll works in both directions on mobile */
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
 }
 
 .iphone-merch .iphone-calendar-content::-webkit-scrollbar {
