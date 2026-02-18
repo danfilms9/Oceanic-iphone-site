@@ -97,25 +97,66 @@ export default async function handler(
         const whosAccountDatabaseId = process.env.NOTION_WHOS_ACCOUNT_DATABASE_ID;
         if (whosAccountDatabaseId) {
           // Extract query parameter value (e.g., "675" from "oceanicofficial.com/merch?675")
+          // Handle Instagram URL rewriting by checking multiple sources
+          // Priority: Hash fragments are most reliable for Instagram (they preserve them)
           let queryValue: string | null = null;
           try {
             const urlToParse = pageUrl.startsWith('http') ? pageUrl : `https://${pageUrl}`;
             const urlObj = new URL(urlToParse);
             
-            // Try to get first query parameter value
-            // Handle both ?675 (no key) and ?slug=675 formats
-            const searchParams = urlObj.searchParams;
-            if (searchParams.toString()) {
-              // If there are query params, get the first value
-              const firstKey = Array.from(searchParams.keys())[0];
-              queryValue = firstKey ? searchParams.get(firstKey) || firstKey : null;
-            } else if (urlObj.search && urlObj.search.startsWith('?')) {
-              // Handle case where URL ends with ?675 (no key-value pair)
-              queryValue = urlObj.search.substring(1); // Remove the ?
+            // Strategy 1: Check hash fragment FIRST (Instagram preserves these best)
+            // Example: ?fbclid=...&#675 -> extracts "675"
+            if (urlObj.hash) {
+              const hashMatch = urlObj.hash.match(/#(\d+)/);
+              if (hashMatch) {
+                queryValue = hashMatch[1];
+              }
+            }
+            
+            // Strategy 2: Check for custom tracking parameters (ref, track, slug, code)
+            if (!queryValue) {
+              const trackingParamNames = ['ref', 'track', 'slug', 'code', 'id'];
+              for (const paramName of trackingParamNames) {
+                const value = urlObj.searchParams.get(paramName);
+                if (value && /^\d+$/.test(value)) { // Only numeric values
+                  queryValue = value;
+                  break;
+                }
+              }
+            }
+            
+            // Strategy 3: Look for standalone numeric query params (Instagram might preserve these)
+            // Check all query parameters for numeric-only values
+            if (!queryValue) {
+              const searchParams = urlObj.searchParams;
+              for (const [key, value] of searchParams.entries()) {
+                // Skip UTM and fbclid parameters, but check others
+                if (!key.startsWith('utm_') && key !== 'fbclid' && /^\d+$/.test(value)) {
+                  queryValue = value;
+                  break;
+                }
+              }
+            }
+            
+            // Strategy 4: Check for standalone ?number pattern (before Instagram rewrites)
+            if (!queryValue && urlObj.search) {
+              // Look for patterns like ?675 or ?675&utm_source=...
+              const match = urlObj.search.match(/(?:^|\&)(\d+)(?:&|$)/);
+              if (match) {
+                queryValue = match[1];
+              }
+            }
+            
+            // Strategy 5: Manual regex fallback for edge cases
+            if (!queryValue) {
+              const match = pageUrl.match(/(?:[?&#])(\d{3,4})(?:[&#]|$)/);
+              if (match) {
+                queryValue = match[1];
+              }
             }
           } catch (urlError) {
             // If URL parsing fails, try to extract ?number pattern manually
-            const match = pageUrl.match(/\?(\d+)/);
+            const match = pageUrl.match(/(?:[?&#])(\d{3,4})(?:[&#]|$)/);
             if (match) {
               queryValue = match[1];
             }
