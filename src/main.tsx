@@ -24,10 +24,12 @@ window.addEventListener('error', (event) => {
   // Don't prevent default for all errors, but log them
 });
 
-// Disable pull-to-refresh on mobile
-// Prevent touchmove when at the top of the page to avoid accidental refresh.
-// Do NOT prevent when the user is touching inside a scrollable container (e.g. merch list),
-// so that in-app scroll works in both directions.
+// Disable pull-to-refresh on mobile.
+// We must NOT prevent touchmove when the user is scrolling inside the merch app (or any
+// scrollable in-app area), or iOS Safari won't scroll the inner div in both directions.
+// Use the touch *start* target for the whole gesture (touchmove target can change as the
+// finger moves), and run in capture phase so we don't interfere with the scroll container.
+
 function isInsideScrollableElement(el: EventTarget | null): boolean {
   if (!el || !(el instanceof Node)) return false;
   let node: Node | null = el as Node;
@@ -53,28 +55,48 @@ function isInsideScrollableElement(el: EventTarget | null): boolean {
   return false;
 }
 
+function isTouchInsideMerchApp(el: EventTarget | null): boolean {
+  if (!el || !(el instanceof Element)) return false;
+  return !!el.closest('.iphone-merch');
+}
+
 let touchStartY = 0;
 let touchStartX = 0;
+let touchStartTarget: EventTarget | null = null;
 
 document.addEventListener('touchstart', (e) => {
   touchStartY = e.touches[0].clientY;
   touchStartX = e.touches[0].clientX;
+  touchStartTarget = e.target;
 }, { passive: true });
 
 document.addEventListener('touchmove', (e) => {
-  // Never block touchmove when the user is scrolling inside a scrollable area (e.g. merch list).
-  // This fixes mobile scroll-up not working because the global handler was affecting inner scroll.
-  if (isInsideScrollableElement(e.target)) return;
+  // Use the element that was under the finger when the gesture started, not the current target
+  // (which can change during move and break scroll, especially on iOS).
+  const startEl = touchStartTarget;
+
+  // Never block touchmove when the gesture started inside the merch app so scroll up/down both work.
+  if (isTouchInsideMerchApp(startEl)) return;
+
+  // Never block when the gesture started inside any scrollable container.
+  if (isInsideScrollableElement(startEl)) return;
 
   const touchY = e.touches[0].clientY;
   const touchX = e.touches[0].clientX;
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
 
-  // If we're at the top of the page and user is trying to scroll down, prevent it (pull-to-refresh)
+  // Only prevent pull-to-refresh: at top of *window* and user is dragging down.
   if (scrollTop === 0 && touchY > touchStartY && Math.abs(touchY - touchStartY) > Math.abs(touchX - touchStartX)) {
     e.preventDefault();
   }
-}, { passive: false });
+}, { passive: false, capture: true });
+
+document.addEventListener('touchend', () => {
+  touchStartTarget = null;
+}, { passive: true });
+document.addEventListener('touchcancel', () => {
+  touchStartTarget = null;
+}, { passive: true });
 
 // Track page visit on load
 try {

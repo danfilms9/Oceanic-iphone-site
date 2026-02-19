@@ -4840,6 +4840,11 @@ a.iphone-settings-option {
   display: none; /* Chrome, Safari, Opera */
 }
 
+/* Merch app: single scroll container so the browser doesn't split gestures between two scrollables */
+.iphone-merch.iphone-calendar {
+  overflow: hidden;
+}
+
 /* Merch app: hide scrollbar on the main content area (scroll happens on iphone-calendar-content) */
 .iphone-merch .iphone-calendar-content {
   scrollbar-width: none; /* Firefox */
@@ -4848,6 +4853,7 @@ a.iphone-settings-option {
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   overscroll-behavior-y: contain;
+  min-height: 0; /* Required for flex child to scroll */
 }
 
 .iphone-merch .iphone-calendar-content::-webkit-scrollbar {
