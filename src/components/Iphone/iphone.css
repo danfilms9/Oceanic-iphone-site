@@ -5126,6 +5126,25 @@ a.iphone-settings-option {
   transform: translate(-70%, -50%) rotate(-135deg);
 }
 
+/* Larger chevrons on mobile for easier tapping */
+@media (max-width: 768px) {
+  .iphone-merch-product-media-chevron {
+    width: 56px;
+    height: 56px;
+  }
+  .iphone-merch-product-media-chevron::after {
+    width: 16px;
+    height: 16px;
+    border-width: 3px;
+  }
+  .iphone-merch-product-media-chevron-right {
+    right: 8px;
+  }
+  .iphone-merch-product-media-chevron-left {
+    left: 8px;
+  }
+}
+
 .iphone-merch-product-details {
   flex-shrink: 0;
   padding: 12px 20px 16px;
