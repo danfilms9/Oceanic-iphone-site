@@ -43,10 +43,11 @@ function IphoneShellContent() {
   const location = useLocation();
   const isTourDeepLink = location.pathname === '/tour';
   const isMerchDeepLink = location.pathname === '/merch';
+  const isMailDeepLink = location.pathname === '/mail';
   const { wallpaper } = useWallpaper();
   const { pause: pauseVisualizer, dispose: disposeVisualizer } = useVisualizer();
   const { isDetailView: isNotesDetailView } = useNotes();
-  const [isLocked, setIsLocked] = useState(!(isTourDeepLink || isMerchDeepLink));
+  const [isLocked, setIsLocked] = useState(!(isTourDeepLink || isMerchDeepLink || isMailDeepLink));
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [time, setTime] = useState(formatTime);
@@ -62,6 +63,7 @@ function IphoneShellContent() {
   const pendingAppIdRef = useRef<string | null>(null);
   const tourDeepLinkAppliedRef = useRef(false);
   const merchDeepLinkAppliedRef = useRef(false);
+  const mailDeepLinkAppliedRef = useRef(false);
   const [isAppClosing, setIsAppClosing] = useState(false);
   const appViewRef = useRef<HTMLDivElement | null>(null);
   const closeAppTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -183,6 +185,18 @@ function IphoneShellContent() {
     }, 600); // Let home screen and dock/apps appear first
     return () => clearTimeout(timer);
   }, [isMerchDeepLink, isLocked, activeAppId, pendingAppId]);
+
+  // Deep link: /mail → open e-mail list app once after home screen is visible (same behavior as /tour)
+  useEffect(() => {
+    if (!isMailDeepLink || isLocked || activeAppId || pendingAppId || mailDeepLinkAppliedRef.current) return;
+    mailDeepLinkAppliedRef.current = true;
+    const timer = setTimeout(() => {
+      setShouldAnimateOut(true);
+      setPendingAppId('mail');
+      pendingAppIdRef.current = 'mail';
+    }, 600); // Let home screen and dock/apps appear first
+    return () => clearTimeout(timer);
+  }, [isMailDeepLink, isLocked, activeAppId, pendingAppId]);
 
   // Cleanup welcome dialog timeout on unmount
   useEffect(() => {
