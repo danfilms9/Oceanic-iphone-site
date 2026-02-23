@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { IphoneHome } from './IphoneHome';
 import { LockScreen } from './LockScreen';
 import { getApp } from '../../apps/appRegistry';
@@ -7,7 +7,9 @@ import { WallpaperProvider, useWallpaper } from './WallpaperContext';
 import { AppNavigationProvider } from './AppNavigationContext';
 import { VisualizerProvider, useVisualizer } from '../VisualizerContext';
 import { useNotes, NotesProvider } from './NotesContext';
+import { MusicDeepLinkProvider, useMusicDeepLink } from './MusicDeepLinkContext';
 import { WelcomeDialog } from './WelcomeDialog';
+import { NewsongDialog } from './NewsongDialog';
 import { playAudio, preloadAudioFiles } from '../../utils/audioUtils';
 import './iphone.css';
 
@@ -39,11 +41,17 @@ function getFrameScale(): number {
   return Math.max(0.1, Math.min(1, scaleByH, scaleByW));
 }
 
+const UNLOCK_BAR_DURATION_MS = 300 + 325;
+const UNLOCK_DOCK_FADE_MS = 400;
+
 function IphoneShellContent() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { setOpenToIYB } = useMusicDeepLink();
   const isTourDeepLink = location.pathname === '/tour';
   const isMerchDeepLink = location.pathname === '/merch';
   const isMailDeepLink = location.pathname === '/mail';
+  const isNewsongDeepLink = location.pathname === '/newsong';
   const { wallpaper } = useWallpaper();
   const { pause: pauseVisualizer, dispose: disposeVisualizer, visualizerLoaded, resetVisualizerLoaded } = useVisualizer();
   const visualizerLoadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -71,10 +79,12 @@ function IphoneShellContent() {
   const tourDeepLinkAppliedRef = useRef(false);
   const merchDeepLinkAppliedRef = useRef(false);
   const mailDeepLinkAppliedRef = useRef(false);
+  const newsongDeepLinkAppliedRef = useRef(false);
   const [isAppClosing, setIsAppClosing] = useState(false);
   const appViewRef = useRef<HTMLDivElement | null>(null);
   const closeAppTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+  const [showNewsongDialog, setShowNewsongDialog] = useState(false);
   const welcomeDialogTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isFrameImageLoaded, setIsFrameImageLoaded] = useState(false);
   const [isWallpaperLoaded, setIsWallpaperLoaded] = useState(false);
@@ -210,6 +220,40 @@ function IphoneShellContent() {
     }, 600); // Let home screen and dock/apps appear first
     return () => clearTimeout(timer);
   }, [isMailDeepLink, isLocked, activeAppId, pendingAppId]);
+
+  // Deep link: /newsong → show "Want to hear the unreleased song?" dialog; on Yes → unlock (if needed), open music, open I'm Your Boy
+  useEffect(() => {
+    if (!isNewsongDeepLink || newsongDeepLinkAppliedRef.current) return;
+    newsongDeepLinkAppliedRef.current = true;
+    setShowNewsongDialog(true);
+    navigate('/', { replace: true });
+  }, [isNewsongDeepLink, navigate]);
+
+  const handleNewsongYes = useCallback(() => {
+    setShowNewsongDialog(false);
+    setOpenToIYB();
+    if (isLocked) {
+      playAudio('/audio/sound-effects/unlock.mp3');
+      setIsUnlocking(true);
+      setTimeout(() => {
+        setIsLocked(false);
+        setTimeout(() => {
+          setIsUnlocking(false);
+          setTimeout(() => {
+            setShouldAnimateOut(true);
+            setPendingAppId('music');
+            pendingAppIdRef.current = 'music';
+          }, 600);
+        }, UNLOCK_DOCK_FADE_MS);
+      }, UNLOCK_BAR_DURATION_MS);
+    } else {
+      setTimeout(() => {
+        setShouldAnimateOut(true);
+        setPendingAppId('music');
+        pendingAppIdRef.current = 'music';
+      }, 100);
+    }
+  }, [isLocked, setOpenToIYB]);
 
   // Cleanup welcome dialog timeout on unmount
   useEffect(() => {
@@ -465,6 +509,14 @@ function IphoneShellContent() {
           {showWelcomeDialog && (
             <WelcomeDialog onClose={() => setShowWelcomeDialog(false)} />
           )}
+
+          {/* Newsong Dialog: /newsong → "Want to hear the unreleased song?" → Yes unlocks, opens Music, opens I'm Your Boy */}
+          {showNewsongDialog && (
+            <NewsongDialog
+              onClose={() => setShowNewsongDialog(false)}
+              onYes={handleNewsongYes}
+            />
+          )}
         </div>
 
         {/* Black overlay for lock animation */}
@@ -587,7 +639,9 @@ export function IphoneShell() {
     <WallpaperProvider>
       <VisualizerProvider>
         <NotesProvider>
-          <IphoneShellContent />
+          <MusicDeepLinkProvider>
+            <IphoneShellContent />
+          </MusicDeepLinkProvider>
         </NotesProvider>
       </VisualizerProvider>
     </WallpaperProvider>

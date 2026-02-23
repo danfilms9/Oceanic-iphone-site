@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppNavigation } from './AppNavigationContext';
+import { useMusicDeepLink } from './MusicDeepLinkContext';
 import { unlockAudioContext } from '../../utils/audioUtils';
 import { trackButtonClick, NOTION_BUTTON_IDS } from '../../services/notionService';
 
@@ -31,6 +32,17 @@ export function MusicPlaceholder() {
 
   const IYB_PRESAVE_URL = 'https://distrokid.com/hyperfollow/oceanicandcapitalsoiree/im-your-boy';
   const { openApp, closeApp } = useAppNavigation();
+  const { consumeOpenToIYB } = useMusicDeepLink();
+
+  // Deep link from /newsong: open directly to I'm Your Boy when this app mounts
+  useEffect(() => {
+    if (consumeOpenToIYB()) {
+      setSelectedTab('songs');
+      setSongDetailPage('imyourboy');
+      setShowIYBWelcomeOverlay(true);
+      setIsIYBWelcomeFading(false);
+    }
+  }, [consumeOpenToIYB]);
 
   const attachIYBAudioListeners = (audio: HTMLAudioElement) => {
     const onTimeUpdate = () => setIybCurrentTime(audio.currentTime);
