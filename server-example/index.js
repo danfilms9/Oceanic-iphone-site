@@ -70,6 +70,13 @@ const notion = new Client({
   auth: process.env.NOTION_API_KEY,
 });
 
+// Button Clicks database: Name, Buttons (relation), Oceanic Website Calendar (relation)
+const NOTION_BUTTON_CLICKS = {
+  titleProperty: 'Name',
+  relationProperty: 'Buttons',
+  calendarRelationProperty: 'Oceanic Website Calendar',
+};
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -497,6 +504,119 @@ app.post('/api/notion/track-visit', async (req, res) => {
   } catch (error) {
     console.error('Track visit error:', error);
     res.status(500).json({ error: 'Failed to track visit', message: error.message });
+  }
+});
+
+// Log a button click in the Button Clicks database (Button relation points to Buttons database)
+app.post('/api/notion/button-click', async (req, res) => {
+  try {
+    const notionApiKey = process.env.NOTION_API_KEY;
+    const databaseId = process.env.NOTION_BUTTON_CLICKS_DATABASE_ID;
+
+    if (!notionApiKey || !databaseId) {
+      return res.status(500).json({ error: 'NOTION_API_KEY or NOTION_BUTTON_CLICKS_DATABASE_ID not configured' });
+    }
+
+    const { buttonId } = req.body || {};
+    if (!buttonId || typeof buttonId !== 'string') {
+      return res.status(400).json({ error: 'buttonId is required (Notion page ID of the button in Buttons database)' });
+    }
+
+    // Notion API accepts IDs with or without dashes; normalize to with-dashes for consistency
+    const toUuid = (id) => {
+      const clean = String(id).replace(/-/g, '').trim();
+      if (clean.length !== 32) return id;
+      return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
+    };
+    const dbId = toUuid(databaseId);
+    const relationPageId = toUuid(buttonId);
+
+    const titleProp = NOTION_BUTTON_CLICKS.titleProperty;
+    const relationProp = NOTION_BUTTON_CLICKS.relationProperty;
+
+    const now = new Date();
+    const entryName = `Click ${now.toISOString().slice(0, 19).replace('T', ' ')}`;
+
+    await notion.pages.create({
+      parent: { database_id: dbId },
+      properties: {
+        [titleProp]: {
+          title: [{ text: { content: entryName } }],
+        },
+        [relationProp]: {
+          relation: [{ id: relationPageId }],
+        },
+      },
+    });
+
+    console.log('Button click logged:', { buttonId: relationPageId });
+    res.json({ success: true });
+  } catch (error) {
+    const notionMessage = error.body?.message || error.message;
+    const notionCode = error.body?.code;
+    console.error('Button click track error:', notionMessage, error.body || '');
+    res.status(500).json({
+      error: 'Failed to log button click',
+      message: notionMessage,
+      code: notionCode,
+      details: error.body,
+    });
+  }
+});
+
+// Log a ticket link click in Button Clicks DB (Oceanic Website Calendar relation). eventId = Notion page ID of the calendar event.
+app.post('/api/notion/ticket-click', async (req, res) => {
+  try {
+    const notionApiKey = process.env.NOTION_API_KEY;
+    const databaseId = process.env.NOTION_BUTTON_CLICKS_DATABASE_ID;
+
+    if (!notionApiKey || !databaseId) {
+      return res.status(500).json({ error: 'NOTION_API_KEY or NOTION_BUTTON_CLICKS_DATABASE_ID not configured' });
+    }
+
+    const { eventId } = req.body || {};
+    if (!eventId || typeof eventId !== 'string') {
+      return res.status(400).json({ error: 'eventId is required (Notion page ID of the calendar event)' });
+    }
+
+    const toUuid = (id) => {
+      const clean = String(id).replace(/-/g, '').trim();
+      if (clean.length !== 32) return id;
+      return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
+    };
+    const dbId = toUuid(databaseId);
+    const relationPageId = toUuid(eventId);
+
+    const titleProp = NOTION_BUTTON_CLICKS.titleProperty;
+    const calendarRelationProp = NOTION_BUTTON_CLICKS.calendarRelationProperty;
+
+    const now = new Date();
+    const entryName = `Ticket click ${now.toISOString().slice(0, 19).replace('T', ' ')}`;
+
+    await notion.pages.create({
+      parent: { database_id: dbId },
+      properties: {
+        [titleProp]: {
+          title: [{ text: { content: entryName } }],
+        },
+        [calendarRelationProp]: {
+          relation: [{ id: relationPageId }],
+        },
+      },
+    });
+
+    console.log('Ticket click logged in Button Clicks:', { eventId: relationPageId });
+    res.json({ success: true });
+  } catch (error) {
+    const notionMessage = error.body?.message || error.message;
+    const notionCode = error.body?.code;
+    console.error('Ticket click track error:', notionMessage, error.body || '');
+    res.status(500).json({
+      error: 'Failed to log ticket click',
+      message: notionMessage,
+      code: notionCode,
+      details: error.body,
+    });
   }
 });
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useEvents } from '../../hooks/useEvents';
+import { trackTicketClick } from '../../services/notionService';
 
 export function MonthView() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -181,7 +182,10 @@ export function MonthView() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="iphone-calendar-event-tickets-button"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          trackTicketClick(event.id);
+                        }}
                       >
                         Tickets
                       </a>

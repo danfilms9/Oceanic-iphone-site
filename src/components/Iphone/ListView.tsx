@@ -1,4 +1,5 @@
 import { useEvents } from '../../hooks/useEvents';
+import { trackTicketClick } from '../../services/notionService';
 import type { CalendarEvent } from '../../types/event';
 
 export function ListView() {
@@ -102,7 +103,10 @@ export function ListView() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="iphone-calendar-event-tickets-button"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          trackTicketClick(event.id);
+                        }}
                       >
                         Tickets
                       </a>

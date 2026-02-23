@@ -45,7 +45,14 @@ function IphoneShellContent() {
   const isMerchDeepLink = location.pathname === '/merch';
   const isMailDeepLink = location.pathname === '/mail';
   const { wallpaper } = useWallpaper();
-  const { pause: pauseVisualizer, dispose: disposeVisualizer } = useVisualizer();
+  const { pause: pauseVisualizer, dispose: disposeVisualizer, visualizerLoaded, resetVisualizerLoaded } = useVisualizer();
+  const visualizerLoadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCloseCompleteRef = useRef<(() => void) | null>(null);
+  const closeAppFnRef = useRef<(() => void) | null>(null);
+  const visualizerLoadedRef = useRef(visualizerLoaded);
+  useEffect(() => {
+    visualizerLoadedRef.current = visualizerLoaded;
+  }, [visualizerLoaded]);
   const { isDetailView: isNotesDetailView } = useNotes();
   const [isLocked, setIsLocked] = useState(!(isTourDeepLink || isMerchDeepLink || isMailDeepLink));
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -128,12 +135,16 @@ function IphoneShellContent() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && activeAppId) {
-        // Cancel any existing close timeout
+        if (visualizerLoadTimeoutRef.current) {
+          clearTimeout(visualizerLoadTimeoutRef.current);
+          visualizerLoadTimeoutRef.current = null;
+        }
+        const onCloseComplete = onCloseCompleteRef.current;
+        onCloseCompleteRef.current = null;
         if (closeAppTimeoutRef.current) {
           clearTimeout(closeAppTimeoutRef.current);
           closeAppTimeoutRef.current = null;
         }
-        // Trigger close animation
         setIsAppClosing(true);
         if (appViewRef.current) {
           const appIdToClose = activeAppId;
@@ -145,10 +156,12 @@ function IphoneShellContent() {
               setIsAppClosing(false);
             }
             closeAppTimeoutRef.current = null;
+            onCloseComplete?.();
           }, 400);
         } else {
           setActiveAppId(null);
           setIsAppClosing(false);
+          onCloseComplete?.();
         }
       }
     };
@@ -218,6 +231,29 @@ function IphoneShellContent() {
     }
   }, [activeAppId, shouldAnimateOut, pendingAppId]);
 
+  // Visualizer: if still loading after 7s, close and reopen. Aborted if user hits home (reopen ref cleared there).
+  useEffect(() => {
+    if (activeAppId !== 'visualizer') return;
+    resetVisualizerLoaded();
+    if (visualizerLoadTimeoutRef.current) {
+      clearTimeout(visualizerLoadTimeoutRef.current);
+      visualizerLoadTimeoutRef.current = null;
+    }
+    visualizerLoadTimeoutRef.current = setTimeout(() => {
+      visualizerLoadTimeoutRef.current = null;
+      if (!visualizerLoadedRef.current) {
+        onCloseCompleteRef.current = () => setActiveAppId('visualizer');
+        closeAppFnRef.current?.();
+      }
+    }, 7000);
+    return () => {
+      if (visualizerLoadTimeoutRef.current) {
+        clearTimeout(visualizerLoadTimeoutRef.current);
+        visualizerLoadTimeoutRef.current = null;
+      }
+    };
+  }, [activeAppId, resetVisualizerLoaded]);
+
   // Stable callback for animate out completion
   const handleAnimateOutComplete = useCallback(() => {
     // After animate out completes, show the app
@@ -229,6 +265,38 @@ function IphoneShellContent() {
       setShouldAnimateOut(false);
     }
   }, []);
+
+  // Shared close app logic; runs onCloseCompleteRef when close animation finishes (e.g. for visualizer 7s reopen).
+  const performCloseApp = useCallback(() => {
+    if (closeAppTimeoutRef.current) {
+      clearTimeout(closeAppTimeoutRef.current);
+      closeAppTimeoutRef.current = null;
+    }
+    setIsAppClosing(true);
+    if (appViewRef.current) {
+      const appIdToClose = activeAppId;
+      closeAppTimeoutRef.current = setTimeout(() => {
+        if (activeAppId === appIdToClose) {
+          setActiveAppId(null);
+          setIsAppClosing(false);
+        } else {
+          setIsAppClosing(false);
+        }
+        closeAppTimeoutRef.current = null;
+        const fn = onCloseCompleteRef.current;
+        onCloseCompleteRef.current = null;
+        fn?.();
+      }, 400);
+    } else {
+      setActiveAppId(null);
+      setIsAppClosing(false);
+      const fn = onCloseCompleteRef.current;
+      onCloseCompleteRef.current = null;
+      fn?.();
+    }
+  }, [activeAppId]);
+
+  closeAppFnRef.current = performCloseApp;
 
   const app = activeAppId ? getApp(activeAppId) : null;
   const Component = app?.component;
@@ -372,34 +440,7 @@ function IphoneShellContent() {
                       }
                       setActiveAppId(id);
                     }} 
-                    closeApp={() => {
-                      // Cancel any existing close timeout
-                      if (closeAppTimeoutRef.current) {
-                        clearTimeout(closeAppTimeoutRef.current);
-                        closeAppTimeoutRef.current = null;
-                      }
-                      // Trigger close animation
-                      setIsAppClosing(true);
-                      if (appViewRef.current) {
-                        // Wait for animation to complete before actually closing
-                        // Store the appId at the time of closing to check if it's still the same
-                        const appIdToClose = activeAppId;
-                        closeAppTimeoutRef.current = setTimeout(() => {
-                          // Only close if the active app is still the one we intended to close
-                          // (i.e., no new app has been opened)
-                          if (activeAppId === appIdToClose) {
-                            setActiveAppId(null);
-                            setIsAppClosing(false);
-                          } else {
-                            setIsAppClosing(false);
-                          }
-                          closeAppTimeoutRef.current = null;
-                        }, 400); // Match animation duration
-                      } else {
-                        setActiveAppId(null);
-                        setIsAppClosing(false);
-                      }
-                    }}
+                    closeApp={performCloseApp}
                   >
                     <Component />
                   </AppNavigationProvider>
@@ -461,30 +502,14 @@ function IphoneShellContent() {
             if (activeAppId === 'visualizer') {
               disposeVisualizer();
             }
-            // Cancel any existing close timeout
-            if (closeAppTimeoutRef.current) {
-              clearTimeout(closeAppTimeoutRef.current);
-              closeAppTimeoutRef.current = null;
+            // Abort visualizer 7s reopen: clear load timeout and don't run reopen on close complete
+            if (visualizerLoadTimeoutRef.current) {
+              clearTimeout(visualizerLoadTimeoutRef.current);
+              visualizerLoadTimeoutRef.current = null;
             }
-            // Trigger close animation
+            onCloseCompleteRef.current = null;
             if (activeAppId) {
-              setIsAppClosing(true);
-              if (appViewRef.current) {
-                // Wait for animation to complete before actually closing
-                const appIdToClose = activeAppId;
-                closeAppTimeoutRef.current = setTimeout(() => {
-                  if (activeAppId === appIdToClose) {
-                    setActiveAppId(null);
-                    setIsAppClosing(false);
-                  } else {
-                    setIsAppClosing(false);
-                  }
-                  closeAppTimeoutRef.current = null;
-                }, 400); // Match animation duration
-              } else {
-                setActiveAppId(null);
-                setIsAppClosing(false);
-              }
+              performCloseApp();
             } else {
               setActiveAppId(null);
             }

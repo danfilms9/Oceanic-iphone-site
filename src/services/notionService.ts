@@ -271,3 +271,58 @@ export async function trackPageVisit(trackingData: TrackingData): Promise<void> 
     // Silently fail - tracking shouldn't break the app
   }
 }
+
+/** Notion page IDs for buttons in the Buttons database (for Button Clicks relation) */
+export const NOTION_BUTTON_IDS = {
+  PRE_SAVE: '31077e8e8c08802faddac57ee5d670c4',
+  DONT_LIKE_THE_SONG: '31077e8e8c08808a8bf2f04e7ebad8ee',
+} as const;
+
+/**
+ * Logs a button click in the Button Clicks Notion database.
+ * The click is related to the given button (page ID in the Buttons database).
+ * Fails silently so tracking doesn't break the app.
+ */
+export async function trackButtonClick(buttonId: string): Promise<void> {
+  try {
+    const response = await fetch('/api/notion/button-click', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ buttonId }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      console.warn('[trackButtonClick] Notion API error:', response.status, err);
+      return;
+    }
+  } catch (e) {
+    console.warn('[trackButtonClick] Request failed:', e);
+  }
+}
+
+/**
+ * Logs a ticket link click for a calendar event in the Ticket Clicks Notion database.
+ * eventId is the Notion page ID of the calendar event (from the Oceanic Website Calendar).
+ * Works for all events automatically; no manual page IDs needed.
+ * Fails silently so tracking doesn't break the app.
+ */
+export async function trackTicketClick(eventId: string): Promise<void> {
+  try {
+    const response = await fetch('/api/notion/ticket-click', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ eventId }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      console.warn('[trackTicketClick] Notion API error:', response.status, err);
+      return;
+    }
+  } catch (e) {
+    console.warn('[trackTicketClick] Request failed:', e);
+  }
+}

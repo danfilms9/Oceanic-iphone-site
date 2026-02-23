@@ -1,23 +1,121 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppNavigation } from './AppNavigationContext';
+import { unlockAudioContext } from '../../utils/audioUtils';
+import { trackButtonClick, NOTION_BUTTON_IDS } from '../../services/notionService';
 
 type MusicTab = 'playlists' | 'artists' | 'songs' | 'albums' | 'more';
 type ArtistsPage = 'main' | 'oceanic';
 type AlbumsPage = 'main' | 'everything';
 type PlaylistsPage = 'main' | 'dance';
+type SongDetailPage = null | 'imyourboy';
+
+const IYB_AUDIO_SRC = '/audio/im-your-boy/IYBFeaturePreview.mp3';
+const IYB_COVER_SRC = '/assets/musicapp/imyourboy_cover.webp';
 
 export function MusicPlaceholder() {
   const [selectedTab, setSelectedTab] = useState<MusicTab>('songs');
   const [artistsPage, setArtistsPage] = useState<ArtistsPage>('main');
   const [albumsPage, setAlbumsPage] = useState<AlbumsPage>('main');
   const [playlistsPage, setPlaylistsPage] = useState<PlaylistsPage>('main');
+  const [songDetailPage, setSongDetailPage] = useState<SongDetailPage>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [showNewTitle, setShowNewTitle] = useState(false);
+  const [isIYBPlaying, setIsIYBPlaying] = useState(false);
+  const [iybCurrentTime, setIybCurrentTime] = useState(0);
+  const [iybDuration, setIybDuration] = useState(0);
+  const [showIYBPreSave, setShowIYBPreSave] = useState(false);
+  const [hasClickedIYBPreSaveInline, setHasClickedIYBPreSaveInline] = useState(false);
+  const [showIYBWelcomeOverlay, setShowIYBWelcomeOverlay] = useState(false);
+  const [isIYBWelcomeFading, setIsIYBWelcomeFading] = useState(false);
+  const iybAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const IYB_PRESAVE_URL = 'https://distrokid.com/hyperfollow/oceanicandcapitalsoiree/im-your-boy';
   const { openApp, closeApp } = useAppNavigation();
+
+  const attachIYBAudioListeners = (audio: HTMLAudioElement) => {
+    const onTimeUpdate = () => setIybCurrentTime(audio.currentTime);
+    const onDurationChange = () => setIybDuration(audio.duration);
+    const onLoadedMetadata = () => setIybDuration(audio.duration);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('durationchange', onDurationChange);
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    setIybDuration(audio.duration || 0);
+    setIybCurrentTime(audio.currentTime || 0);
+  };
+
+  // Sync IYB progress when on album page and audio already exists
+  useEffect(() => {
+    if (songDetailPage !== 'imyourboy' || !iybAudioRef.current) return;
+    const audio = iybAudioRef.current;
+    setIybCurrentTime(audio.currentTime);
+    setIybDuration(audio.duration || 0);
+  }, [songDetailPage]);
+
+  // Show Pre Save popup after 26 seconds, unless user already clicked the inline Pre Save button
+  useEffect(() => {
+    if (isIYBPlaying && iybCurrentTime >= 26 && !hasClickedIYBPreSaveInline) {
+      setShowIYBPreSave(true);
+    }
+  }, [isIYBPlaying, iybCurrentTime, hasClickedIYBPreSaveInline]);
 
   const handleOpenVisualizer = () => {
     closeApp();
     setTimeout(() => openApp('visualizer'), 100);
+  };
+
+  const handleOpenIYourBoyPage = () => {
+    setSelectedTab('songs');
+    setSongDetailPage('imyourboy');
+    setShowIYBWelcomeOverlay(true);
+    setIsIYBWelcomeFading(false);
+  };
+
+  const handleSongDetailBack = () => {
+    if (iybAudioRef.current) {
+      iybAudioRef.current.pause();
+      setIsIYBPlaying(false);
+    }
+    setShowIYBPreSave(false);
+    setHasClickedIYBPreSaveInline(false);
+    setShowIYBWelcomeOverlay(false);
+    setIsIYBWelcomeFading(false);
+    setSongDetailPage(null);
+  };
+
+  const handleIYBPreSaveClick = () => {
+    trackButtonClick(NOTION_BUTTON_IDS.PRE_SAVE);
+    window.open(IYB_PRESAVE_URL, '_blank', 'noopener,noreferrer');
+    setTimeout(() => setShowIYBPreSave(false), 3000);
+  };
+
+  const handleIYBDontLikeClick = () => {
+    trackButtonClick(NOTION_BUTTON_IDS.DONT_LIKE_THE_SONG);
+    setShowIYBPreSave(false);
+  };
+
+  const handleIYBPreviewNow = () => {
+    setIsIYBWelcomeFading(true);
+    toggleIYBPlayPause();
+    setTimeout(() => {
+      setShowIYBWelcomeOverlay(false);
+      setIsIYBWelcomeFading(false);
+    }, 350);
+  };
+
+  const toggleIYBPlayPause = () => {
+    unlockAudioContext();
+    if (!iybAudioRef.current) {
+      iybAudioRef.current = new Audio(IYB_AUDIO_SRC);
+      iybAudioRef.current.addEventListener('ended', () => setIsIYBPlaying(false));
+      attachIYBAudioListeners(iybAudioRef.current);
+    }
+    const audio = iybAudioRef.current;
+    if (isIYBPlaying) {
+      audio.pause();
+      setIsIYBPlaying(false);
+    } else {
+      audio.play().then(() => setIsIYBPlaying(true)).catch(() => {});
+    }
   };
   
   // Refs for title elements to check if they overflow
@@ -33,6 +131,9 @@ export function MusicPlaceholder() {
   };
 
   const getTabTitle = () => {
+    if (selectedTab === 'songs' && songDetailPage === 'imyourboy') {
+      return "I'm Your Boy feat ???";
+    }
     if (selectedTab === 'artists' && artistsPage === 'oceanic') {
       return 'Oceanic';
     }
@@ -130,6 +231,13 @@ export function MusicPlaceholder() {
     if (tab !== 'playlists') {
       setPlaylistsPage('main');
     }
+    if (tab !== 'songs') {
+      if (songDetailPage === 'imyourboy' && iybAudioRef.current) {
+        iybAudioRef.current.pause();
+        setIsIYBPlaying(false);
+      }
+      setSongDetailPage(null);
+    }
   };
 
   // Check if title overflows and add scrolling class with dynamic scroll distance (YouTube-style)
@@ -192,16 +300,26 @@ export function MusicPlaceholder() {
               } else {
                 element.classList.remove('iphone-music-title-scrolling');
                 element.style.removeProperty('--youtube-scroll-distance');
-                element.style.removeProperty('--music-title-start-x');
-                // Remove class from container
-                if (container) {
-                  container.classList.remove('iphone-music-title-container-scrolling');
+                // When back button is visible, still position title after it and apply left fade
+                if (backButton) {
+                  element.style.setProperty('--music-title-start-x', `${titleStartX}px`);
+                  element.classList.add('iphone-music-title-with-back');
+                  if (container) {
+                    container.classList.add('iphone-music-title-container-scrolling');
+                  }
+                } else {
+                  element.style.removeProperty('--music-title-start-x');
+                  element.classList.remove('iphone-music-title-with-back');
+                  if (container) {
+                    container.classList.remove('iphone-music-title-container-scrolling');
+                  }
                 }
               }
             }, 100);
           } else {
             // Remove scrolling during transitions
             element.classList.remove('iphone-music-title-scrolling');
+            element.classList.remove('iphone-music-title-with-back');
             element.style.removeProperty('--youtube-scroll-distance');
             element.style.removeProperty('--music-title-start-x');
             if (container) {
@@ -226,7 +344,7 @@ export function MusicPlaceholder() {
       clearTimeout(timeout3);
       window.removeEventListener('resize', checkOverflow);
     };
-  }, [selectedTab, artistsPage, albumsPage, playlistsPage, showNewTitle]);
+  }, [selectedTab, artistsPage, albumsPage, playlistsPage, showNewTitle, songDetailPage]);
 
   const renderContent = () => {
     switch (selectedTab) {
@@ -257,7 +375,14 @@ export function MusicPlaceholder() {
                   className="iphone-music-item"
                   onClick={handleOpenVisualizer}
                 >
-                  <span className="iphone-music-item-text">Hold Me (Palomar Remix)</span>
+                  <span className="iphone-music-item-text">Hold Me (Palomar Remix) (Visulizer)</span>
+                  <span className="iphone-music-item-chevron"></span>
+                </button>
+                <button 
+                  className="iphone-music-item"
+                  onClick={handleOpenIYourBoyPage}
+                >
+                  <span className="iphone-music-item-text">I'm Your Boy feat ???</span>
                   <span className="iphone-music-item-chevron"></span>
                 </button>
               </div>
@@ -291,7 +416,14 @@ export function MusicPlaceholder() {
                   className="iphone-music-item"
                   onClick={handleOpenVisualizer}
                 >
-                  <span className="iphone-music-item-text">Hold Me (Palomar Remix)</span>
+                  <span className="iphone-music-item-text">Hold Me (Palomar Remix) (Visulizer)</span>
+                  <span className="iphone-music-item-chevron"></span>
+                </button>
+                <button 
+                  className="iphone-music-item"
+                  onClick={handleOpenIYourBoyPage}
+                >
+                  <span className="iphone-music-item-text">I'm Your Boy feat ???</span>
                   <span className="iphone-music-item-chevron"></span>
                 </button>
               </div>
@@ -299,13 +431,114 @@ export function MusicPlaceholder() {
           </div>
         );
       case 'songs':
+        if (songDetailPage === 'imyourboy') {
+          const iybProgress = iybDuration > 0 ? iybCurrentTime / iybDuration : 0;
+          const showWelcomeOverlay = showIYBWelcomeOverlay || isIYBWelcomeFading;
+          return (
+            <div className="iphone-music-album-page">
+              {showWelcomeOverlay && (
+                <div
+                  className={`iphone-music-album-welcome-overlay ${isIYBWelcomeFading ? 'iphone-music-album-welcome-overlay-fade-out' : ''}`}
+                  role="dialog"
+                  aria-label="New release announcement"
+                >
+                  <div className="iphone-music-album-welcome-popup">
+                    <p className="iphone-music-album-welcome-message">
+                      We are releasing a new version of &quot;I&apos;m Your Boy&quot; with a suprise feature! It comes out this Friday
+                    </p>
+                    <button
+                      type="button"
+                      className="iphone-music-album-welcome-preview-btn"
+                      onClick={handleIYBPreviewNow}
+                    >
+                      Preview Now
+                    </button>
+                  </div>
+                </div>
+              )}
+              <img
+                src={IYB_COVER_SRC}
+                alt="I'm Your Boy"
+                className={`iphone-music-album-cover ${isIYBPlaying ? 'iphone-music-album-cover-playing' : ''}`}
+              />
+              <button
+                type="button"
+                className="iphone-music-album-play-pause"
+                onClick={toggleIYBPlayPause}
+                aria-label={isIYBPlaying ? 'Pause' : 'Play'}
+              >
+                <span className={`iphone-music-play-pause-icon ${isIYBPlaying ? 'iphone-music-pause' : 'iphone-music-play'}`} />
+              </button>
+              <div className="iphone-music-album-progress-wrap">
+                <div
+                  className="iphone-music-album-progress-track"
+                  role="progressbar"
+                  aria-valuenow={iybDuration ? (iybCurrentTime / iybDuration) * 100 : 0}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <div
+                    className="iphone-music-album-progress-fill"
+                    style={{ width: `${iybProgress * 100}%` }}
+                  />
+                </div>
+              </div>
+              {showIYBPreSave && (
+                <div className="iphone-music-album-presave-overlay" role="dialog" aria-label="Pre-save">
+                  <div className="iphone-music-album-presave-popup">
+                    <p className="iphone-music-album-presave-message">
+                      Pre-save the song to be the first to hear the whole thing
+                    </p>
+                    <div className="iphone-music-album-presave-popup-buttons">
+                      <button
+                        type="button"
+                        className="iphone-music-album-presave-dontlike-btn"
+                        onClick={handleIYBDontLikeClick}
+                      >
+                        I don&apos;t like the song
+                      </button>
+                      <button
+                        type="button"
+                        className="iphone-music-album-presave-btn"
+                        onClick={handleIYBPreSaveClick}
+                      >
+                        Pre Save
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="iphone-music-album-presave-inline">
+                <a
+                  href={IYB_PRESAVE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="iphone-music-album-presave-inline-btn"
+                  onClick={() => {
+                    setHasClickedIYBPreSaveInline(true);
+                    trackButtonClick(NOTION_BUTTON_IDS.PRE_SAVE);
+                  }}
+                >
+                  Pre Save
+                </a>
+              </div>
+            </div>
+          );
+        }
         return (
           <div className="iphone-music-list">
             <button 
               className="iphone-music-item"
               onClick={handleOpenVisualizer}
             >
-              <span className="iphone-music-item-text">Hold Me (Palomar Remix)</span>
+              <span className="iphone-music-item-text">Hold Me (Palomar Remix) (Visulizer)</span>
+              <span className="iphone-music-item-chevron"></span>
+            </button>
+            <button 
+              className="iphone-music-item"
+              onClick={handleOpenIYourBoyPage}
+            >
+              <span className="iphone-music-item-text">I'm Your Boy feat ???</span>
               <span className="iphone-music-item-chevron"></span>
             </button>
           </div>
@@ -337,7 +570,14 @@ export function MusicPlaceholder() {
                   className="iphone-music-item"
                   onClick={handleOpenVisualizer}
                 >
-                  <span className="iphone-music-item-text">Hold Me (Palomar Remix)</span>
+                  <span className="iphone-music-item-text">Hold Me (Palomar Remix) (Visulizer)</span>
+                  <span className="iphone-music-item-chevron"></span>
+                </button>
+                <button 
+                  className="iphone-music-item"
+                  onClick={handleOpenIYourBoyPage}
+                >
+                  <span className="iphone-music-item-text">I'm Your Boy feat ???</span>
                   <span className="iphone-music-item-chevron"></span>
                 </button>
               </div>
@@ -361,10 +601,12 @@ export function MusicPlaceholder() {
       <div className="iphone-music-top-bar">
         {((selectedTab === 'artists' && artistsPage !== 'main') || 
           (selectedTab === 'albums' && albumsPage !== 'main') ||
-          (selectedTab === 'playlists' && playlistsPage !== 'main')) && (
+          (selectedTab === 'playlists' && playlistsPage !== 'main') ||
+          (selectedTab === 'songs' && songDetailPage !== null)) && (
           <button 
             className="iphone-music-back-button"
             onClick={
+              selectedTab === 'songs' ? handleSongDetailBack :
               selectedTab === 'artists' ? handleArtistsBack : 
               selectedTab === 'albums' ? handleAlbumsBack :
               handlePlaylistsBack
@@ -375,13 +617,14 @@ export function MusicPlaceholder() {
               <div className="iphone-music-back-arrow-head"></div>
             </div>
             <span className="iphone-music-back-text">
-              {selectedTab === 'artists' ? 'Artists' : 
+              {selectedTab === 'songs' ? 'Songs' :
+               selectedTab === 'artists' ? 'Artists' : 
                selectedTab === 'albums' ? 'Albums' : 
                'Playlists'}
             </span>
           </button>
         )}
-        <div className="iphone-music-title-container">
+        <div className={`iphone-music-title-container ${selectedTab === 'songs' && songDetailPage !== null ? 'iphone-music-title-container-fade-left-only' : ''}`}>
           {selectedTab === 'artists' ? (
             <>
               <h1 
@@ -442,19 +685,21 @@ export function MusicPlaceholder() {
             </h1>
           )}
         </div>
-        <button 
-          className="iphone-music-now-playing-button"
-          onClick={handleOpenVisualizer}
-        >
-          <span className="iphone-music-now-playing-text">
-            <span>Now</span>
-            <span>Playing</span>
-          </span>
-          <div className="iphone-music-now-playing-arrow">
-            <div className="iphone-music-now-playing-arrow-stem"></div>
-            <div className="iphone-music-now-playing-arrow-head"></div>
-          </div>
-        </button>
+        {songDetailPage === null && (
+          <button 
+            className="iphone-music-now-playing-button"
+            onClick={handleOpenVisualizer}
+          >
+            <span className="iphone-music-now-playing-text">
+              <span>Now</span>
+              <span>Playing</span>
+            </span>
+            <div className="iphone-music-now-playing-arrow">
+              <div className="iphone-music-now-playing-arrow-stem"></div>
+              <div className="iphone-music-now-playing-arrow-head"></div>
+            </div>
+          </button>
+        )}
       </div>
 
       {/* Content Area */}
