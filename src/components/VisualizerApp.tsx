@@ -4,7 +4,7 @@ import { MultiStemAudioController } from '../audio/MultiStemAudioController';
 import { useVisualizer } from './VisualizerContext';
 
 export function VisualizerApp() {
-  const { registerPauseResume, registerDispose, pausedTime, resume } = useVisualizer();
+  const { registerPauseResume, registerDispose, pausedTime, resume, reportVisualizerLoaded } = useVisualizer();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<VisualizerEngine | null>(null);
   const audioControllerRef = useRef<MultiStemAudioController | null>(null);
@@ -118,12 +118,14 @@ export function VisualizerApp() {
             setIsPlaying(true);
           }
           setIsLoading(false);
+          reportVisualizerLoaded();
         } catch (error) {
           if (audioController) {
             setTrackName(audioController.getCurrentTrackName());
           }
           setIsLoading(false);
           setIsPlaying(true);
+          reportVisualizerLoaded();
         }
       
       // Create engine with audio controller
@@ -363,11 +365,8 @@ export function VisualizerApp() {
         height={600}
       />
       {isLoading && (
-        <div className="visualizer-loading">
-          <div>Loading audio stems...</div>
-          <div style={{ fontSize: '0.8em', marginTop: '0.5em', opacity: 0.7 }}>
-            Please wait while we load all audio tracks
-          </div>
+        <div className="visualizer-loading" aria-label="Loading">
+          <div className="visualizer-loading-spinner" />
         </div>
       )}
     </div>

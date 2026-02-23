@@ -8,6 +8,12 @@ interface VisualizerContextType {
   dispose: () => void;
   registerPauseResume: (pauseFn: () => number, resumeFn: (time: number) => void) => void;
   registerDispose: (disposeFn: () => void) => void;
+  /** Whether the visualizer has finished loading (audio + engine ready). */
+  visualizerLoaded: boolean;
+  /** Call when loading has finished. */
+  reportVisualizerLoaded: () => void;
+  /** Reset loaded state when visualizer is opened (called by shell). */
+  resetVisualizerLoaded: () => void;
 }
 
 const VisualizerContext = createContext<VisualizerContextType | undefined>(undefined);
@@ -18,6 +24,7 @@ export function VisualizerProvider({ children }: { children: ReactNode }) {
   const [pauseFn, setPauseFn] = useState<(() => number) | null>(null);
   const [resumeFn, setResumeFn] = useState<((time: number) => void) | null>(null);
   const [disposeFn, setDisposeFn] = useState<(() => void) | null>(null);
+  const [visualizerLoaded, setVisualizerLoaded] = useState(false);
 
   const registerPauseResume = useCallback((pause: () => number, resume: (time: number) => void) => {
     setPauseFn(() => pause);
@@ -52,6 +59,14 @@ export function VisualizerProvider({ children }: { children: ReactNode }) {
     }
   }, [disposeFn]);
 
+  const reportVisualizerLoaded = useCallback(() => {
+    setVisualizerLoaded(true);
+  }, []);
+
+  const resetVisualizerLoaded = useCallback(() => {
+    setVisualizerLoaded(false);
+  }, []);
+
   return (
     <VisualizerContext.Provider
       value={{
@@ -62,6 +77,9 @@ export function VisualizerProvider({ children }: { children: ReactNode }) {
         dispose,
         registerPauseResume,
         registerDispose,
+        visualizerLoaded,
+        reportVisualizerLoaded,
+        resetVisualizerLoaded,
       }}
     >
       {children}

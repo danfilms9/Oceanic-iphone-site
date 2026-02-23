@@ -26,8 +26,21 @@
   left: 50%;
   transform: translate(-50%, -50%);
   color: #fff;
-  font-size: 14px;
-  font-family: Helvetica, Arial, sans-serif;
+}
+
+.visualizer-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: visualizer-spin 0.9s linear infinite;
+}
+
+@keyframes visualizer-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .visualizer-control-bar {
