@@ -276,6 +276,8 @@ export async function trackPageVisit(trackingData: TrackingData): Promise<void> 
 export const NOTION_BUTTON_IDS = {
   PRE_SAVE: '31077e8e8c08802faddac57ee5d670c4',
   DONT_LIKE_THE_SONG: '31077e8e8c08808a8bf2f04e7ebad8ee',
+  MERCH_CART: '31077e8e8c08804084acc04cc71b1a0b',
+  MERCH_APP: '31077e8e8c088080958bd55286b65a2d',
 } as const;
 
 /**

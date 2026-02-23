@@ -7,6 +7,7 @@ import { MerchProductPage, type ExpandedMediaPayload } from './MerchProductPage'
 import { MerchCartView } from './MerchCartView';
 import { useMerchProducts } from '../../hooks/useMerchProducts';
 import { useMerchCart } from '../../hooks/useMerchCart';
+import { trackButtonClick, NOTION_BUTTON_IDS } from '../../services/notionService';
 import type { MerchProduct } from '../../types/merch';
 
 type MerchView = 'list' | 'all' | 'cart';
@@ -63,7 +64,11 @@ export function MerchPlaceholder() {
               <button
                 type="button"
                 className="iphone-calendar-segmented-button iphone-merch-cart-tab"
-                onClick={() => { setSelectedProduct(null); setCurrentView('cart'); }}
+                onClick={() => {
+                  trackButtonClick(NOTION_BUTTON_IDS.MERCH_CART);
+                  setSelectedProduct(null);
+                  setCurrentView('cart');
+                }}
               >
                 Cart
                 {lineCount > 0 && <span className="iphone-merch-cart-badge">{lineCount}</span>}
@@ -189,7 +194,10 @@ export function MerchPlaceholder() {
             <button
               type="button"
               className={`iphone-calendar-segmented-button iphone-merch-cart-tab ${currentView === 'cart' ? 'iphone-calendar-segmented-button-selected' : ''}`}
-              onClick={() => handleViewChange('cart')}
+              onClick={() => {
+                trackButtonClick(NOTION_BUTTON_IDS.MERCH_CART);
+                handleViewChange('cart');
+              }}
             >
               Cart
               {lineCount > 0 && <span className="iphone-merch-cart-badge">{lineCount}</span>}

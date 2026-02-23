@@ -11,6 +11,7 @@ import { MusicDeepLinkProvider, useMusicDeepLink } from './MusicDeepLinkContext'
 import { WelcomeDialog } from './WelcomeDialog';
 import { NewsongDialog } from './NewsongDialog';
 import { playAudio, preloadAudioFiles } from '../../utils/audioUtils';
+import { trackButtonClick, NOTION_BUTTON_IDS } from '../../services/notionService';
 import './iphone.css';
 
 const FRAME_W = 826;
@@ -492,7 +493,7 @@ function IphoneShellContent() {
               ) : (
                 <IphoneHome 
                   onSelectApp={(id) => {
-                    // Trigger animate out before showing app
+                    if (id === 'merch') trackButtonClick(NOTION_BUTTON_IDS.MERCH_APP);
                     setShouldAnimateOut(true);
                     setPendingAppId(id);
                     pendingAppIdRef.current = id;
