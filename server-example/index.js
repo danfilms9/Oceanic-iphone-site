@@ -36,22 +36,34 @@ for (const p of envCandidates) {
 }
 if (!loadedPath) dotenv.config();
 
-// Fallback: if Shopify vars missing, parse .env file directly (handles encoding/quirks)
-if ((!process.env.SHOPIFY_STORE_DOMAIN || !process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN) && loadedPath) {
-  try {
-    let raw = fs.readFileSync(loadedPath, 'utf8');
-    if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
-    for (const line of raw.split(/\r?\n/)) {
+// Fallback: if Shopify or YouTube vars missing, parse .env file directly (handles encoding/quirks)
+if (loadedPath) {
+  const needShopify = !process.env.SHOPIFY_STORE_DOMAIN || !process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN;
+  const needYouTube = !process.env.YOUTUBE_API_KEY && !process.env.GOOGLE_API_KEY;
+  if (needShopify || needYouTube) {
+    try {
+      let raw = fs.readFileSync(loadedPath, 'utf8');
+      if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
       const trimVal = (s) => (s || '').replace(/\s*#.*$/, '').replace(/^["']|["']$/g, '').trim();
-      if (line.startsWith('SHOPIFY_STORE_DOMAIN=')) {
-        process.env.SHOPIFY_STORE_DOMAIN = trimVal(line.slice(line.indexOf('=') + 1));
+      for (const line of raw.split(/\r?\n/)) {
+        if (needShopify && line.startsWith('SHOPIFY_STORE_DOMAIN=')) {
+          process.env.SHOPIFY_STORE_DOMAIN = trimVal(line.slice(line.indexOf('=') + 1));
+        }
+        if (needShopify && line.startsWith('SHOPIFY_STOREFRONT_ACCESS_TOKEN=')) {
+          process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN = trimVal(line.slice(line.indexOf('=') + 1));
+        }
+        if (needYouTube && line.startsWith('YOUTUBE_API_KEY=')) {
+          const val = trimVal(line.slice(line.indexOf('=') + 1));
+          if (val) process.env.YOUTUBE_API_KEY = val;
+        }
+        if (needYouTube && line.startsWith('GOOGLE_API_KEY=')) {
+          const val = trimVal(line.slice(line.indexOf('=') + 1));
+          if (val) process.env.GOOGLE_API_KEY = val;
+        }
       }
-      if (line.startsWith('SHOPIFY_STOREFRONT_ACCESS_TOKEN=')) {
-        process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN = trimVal(line.slice(line.indexOf('=') + 1));
-      }
+    } catch (e) {
+      console.warn('Could not fallback-parse .env:', e.message);
     }
-  } catch (e) {
-    console.warn('Could not fallback-parse .env for Shopify:', e.message);
   }
 }
 
@@ -637,10 +649,12 @@ app.get('/api/youtube/metadata', async (req, res) => {
     }
     
     const videoId = videoIdMatch[1];
-    
+    console.log('[YouTube metadata] Request videoId=', videoId, 'videoUrl=', videoUrl);
+
     // Use oEmbed API (no key required) for basic info
     const oembedResponse = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(videoUrl)}&format=json`);
     if (!oembedResponse.ok) {
+      console.error('[YouTube metadata] oEmbed failed', oembedResponse.status, await oembedResponse.text());
       throw new Error('Failed to fetch oEmbed data');
     }
     const oembedData = await oembedResponse.json();
@@ -660,22 +674,27 @@ app.get('/api/youtube/metadata', async (req, res) => {
     };
     
     // If YouTube Data API key is available, enhance with detailed stats
-    if (process.env.YOUTUBE_API_KEY) {
+    const youtubeApiKey = process.env.YOUTUBE_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!youtubeApiKey) {
+      console.log('[YouTube metadata] No YOUTUBE_API_KEY or GOOGLE_API_KEY – returning oEmbed only (stats will be 0)');
+    } else {
       try {
-        const youtubeResponse = await fetch(
-          `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${process.env.YOUTUBE_API_KEY}&part=snippet,statistics,contentDetails`
-        );
-        
-        if (youtubeResponse.ok) {
-          const youtubeData = await youtubeResponse.json();
-          
-          if (youtubeData.items && youtubeData.items.length > 0) {
-            const item = youtubeData.items[0];
-            const statistics = item.statistics;
-            const contentDetails = item.contentDetails;
-            
-            // Parse duration (ISO 8601 format: PT1H2M10S)
-            const durationMatch = contentDetails.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+        const youtubeApiUrl = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${youtubeApiKey}&part=snippet,statistics,contentDetails`;
+        console.log('[YouTube metadata] Calling YouTube Data API v3 for videoId=', videoId);
+        const youtubeResponse = await fetch(youtubeApiUrl);
+        const youtubeData = await youtubeResponse.json();
+
+        if (!youtubeResponse.ok) {
+          console.error('[YouTube metadata] YouTube API error', youtubeResponse.status, JSON.stringify(youtubeData?.error || youtubeData, null, 2));
+        } else if (!youtubeData.items || youtubeData.items.length === 0) {
+          console.warn('[YouTube metadata] YouTube API returned no items for videoId=', videoId, 'response:', JSON.stringify(youtubeData, null, 2));
+        } else {
+          const item = youtubeData.items[0];
+          const statistics = item.statistics || {};
+          const contentDetails = item.contentDetails || {};
+
+          // Parse duration (ISO 8601 format: PT1H2M10S)
+          const durationMatch = (contentDetails.duration || '').match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
             let durationSeconds = 0;
             if (durationMatch) {
               durationSeconds += (parseInt(durationMatch[1] || 0)) * 3600;
@@ -690,29 +709,29 @@ app.get('/api/youtube/metadata', async (req, res) => {
               ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
               : `${minutes}:${seconds.toString().padStart(2, '0')}`;
             
-            // Calculate like percentage
-            const likeCount = parseInt(statistics.likeCount || 0);
-            const viewCount = parseInt(statistics.viewCount || 0);
-            const likePercentage = viewCount > 0 ? Math.round((likeCount / viewCount) * 100) : 0;
-            
-            // Enhance base response with detailed stats
-            return res.json({
-              ...baseResponse,
-              viewCount: viewCount,
-              likePercentage: likePercentage,
-              duration: duration,
-            });
-          }
+          // Calculate like percentage
+          const likeCount = parseInt(statistics.likeCount || 0, 10);
+          const viewCount = parseInt(statistics.viewCount || 0, 10);
+          const likePercentage = viewCount > 0 ? Math.round((likeCount / viewCount) * 100) : 0;
+
+          console.log('[YouTube metadata] Stats for', videoId, 'viewCount=', viewCount, 'likePercentage=', likePercentage, 'duration=', duration);
+
+          return res.json({
+            ...baseResponse,
+            viewCount,
+            likePercentage,
+            duration,
+          });
         }
       } catch (youtubeError) {
-        console.warn('YouTube Data API error, using oEmbed data only:', youtubeError);
+        console.error('[YouTube metadata] YouTube Data API exception:', youtubeError.message || youtubeError);
       }
     }
-    
-    // Return oEmbed data (works without API key, but stats will be 0)
+
+    console.log('[YouTube metadata] Returning oEmbed-only (no stats) for videoId=', videoId);
     res.json(baseResponse);
   } catch (error) {
-    console.error('YouTube metadata error:', error);
+    console.error('[YouTube metadata] Error:', error.message || error);
     res.status(500).json({ 
       error: 'Failed to fetch YouTube metadata',
       message: error.message 
@@ -1078,6 +1097,6 @@ app.listen(PORT, () => {
   console.log(`📧 Email Database ID: ${process.env.NOTION_EMAIL_DATABASE_ID ? 'Configured' : 'NOT SET'}`);
   console.log(`📇 Contact Database ID: ${process.env.NOTION_CONTACT_DATABASE_ID || '2f177e8e8c0880ddb89ee26660263f3a (hardcoded)'}`);
   console.log(`📄 About Database ID: ${process.env.NOTION_ABOUT_DATABASE_ID || '2f177e8e8c088005954fc4434d81aa21 (hardcoded)'}`);
-  console.log(`🎬 YouTube API Key: ${process.env.YOUTUBE_API_KEY ? 'Configured (enhanced stats enabled)' : 'NOT SET (using oEmbed - basic info only)'}`);
+  console.log(`🎬 YouTube API Key: ${(process.env.YOUTUBE_API_KEY || process.env.GOOGLE_API_KEY) ? 'Configured (enhanced stats enabled)' : 'NOT SET (using oEmbed - basic info only)'}`);
   console.log(`🛒 Shopify: ${process.env.SHOPIFY_STORE_DOMAIN && process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN ? 'Configured (Merch products from Shopify)' : 'NOT SET (Merch uses test data)'}`);
 });

@@ -26,6 +26,7 @@ export default async function handler(
     }
 
     const videoId = videoIdMatch[1];
+    console.log('[YouTube metadata] Request videoId=', videoId);
 
     // Use oEmbed API (no key required) for basic info
     const oembedResponse = await fetch(
@@ -53,18 +54,23 @@ export default async function handler(
     };
 
     // YouTube Data API v3 is required for view counts, likes, and duration.
-    // Set YOUTUBE_API_KEY in your Vercel project (Environment Variables) for the deployed site.
     const youtubeApiKey =
       process.env.YOUTUBE_API_KEY || process.env.GOOGLE_API_KEY;
-    if (youtubeApiKey) {
+    if (!youtubeApiKey) {
+      console.log('[YouTube metadata] No YOUTUBE_API_KEY or GOOGLE_API_KEY – returning oEmbed only');
+    } else {
       try {
+        console.log('[YouTube metadata] Calling YouTube Data API v3 for videoId=', videoId);
         const youtubeResponse = await fetch(
           `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${youtubeApiKey}&part=snippet,statistics,contentDetails`
         );
-
         const youtubeData = await youtubeResponse.json();
 
-        if (youtubeResponse.ok && youtubeData.items?.length > 0) {
+        if (!youtubeResponse.ok) {
+          console.error('[YouTube metadata] YouTube API error', youtubeResponse.status, JSON.stringify(youtubeData?.error || youtubeData));
+        } else if (!youtubeData.items?.length) {
+          console.warn('[YouTube metadata] YouTube API returned no items for videoId=', videoId);
+        } else {
           const item = youtubeData.items[0];
           const statistics = item.statistics || {};
           const contentDetails = item.contentDetails || {};
@@ -104,6 +110,7 @@ export default async function handler(
           res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
           res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+          console.log('[YouTube metadata] Stats for', videoId, 'viewCount=', viewCount, 'likePercentage=', likePercentage);
           return res.status(200).json({
             ...baseResponse,
             viewCount,
@@ -111,23 +118,12 @@ export default async function handler(
             duration,
           });
         }
-
-        if (!youtubeResponse.ok && youtubeData?.error) {
-          console.warn(
-            'YouTube Data API error:',
-            youtubeData.error.code,
-            youtubeData.error.message
-          );
-        }
-      } catch (youtubeError) {
-        console.warn(
-          'YouTube Data API error, using oEmbed data only:',
-          youtubeError
-        );
+      } catch (youtubeError: any) {
+        console.error('[YouTube metadata] YouTube Data API exception:', youtubeError?.message || youtubeError);
       }
     }
 
-    // Return oEmbed data (works without API key, but stats will be 0)
+    console.log('[YouTube metadata] Returning oEmbed-only for videoId=', videoId);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

@@ -45,27 +45,35 @@ async function fetchYouTubeMetadata(videoUrl: string): Promise<{
   channelName: string;
 }> {
   try {
-    const response = await fetch(`/api/youtube/metadata?videoUrl=${encodeURIComponent(videoUrl)}`);
-    
+    const url = `/api/youtube/metadata?videoUrl=${encodeURIComponent(videoUrl)}`;
+    console.log('[YouTube metadata] Fetching', videoUrl);
+    const response = await fetch(url);
+
     if (!response.ok) {
+      const text = await response.text();
+      console.error('[YouTube metadata] Server error', response.status, response.statusText, text);
       throw new Error(`Failed to fetch YouTube metadata: ${response.statusText}`);
     }
-    
+
     const data = await response.json();
     const videoId = extractVideoId(videoUrl);
-    
-    // For now, return basic data. In production, you'd want to use YouTube Data API v3
-    // to get accurate view counts, likes, duration, and channel info
+
+    const viewCount = data.viewCount ?? 0;
+    const likePercentage = data.likePercentage ?? 0;
+    if (viewCount === 0 && likePercentage === 0) {
+      console.warn('[YouTube metadata] Got 0 views/0% for', videoUrl, '– full response:', JSON.stringify(data));
+    }
+
     return {
       title: data.title || 'Untitled',
       thumbnail: data.thumbnail || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-      viewCount: data.viewCount || 0,
-      likePercentage: data.likePercentage || 0,
+      viewCount,
+      likePercentage,
       duration: data.duration || '0:00',
       channelName: data.channelName || 'Unknown Channel',
     };
   } catch (error) {
-    console.error('Error fetching YouTube metadata:', error);
+    console.error('[YouTube metadata] Error fetching metadata:', error);
     const videoId = extractVideoId(videoUrl);
     return {
       title: 'Video',
