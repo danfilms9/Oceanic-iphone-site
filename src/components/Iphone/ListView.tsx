@@ -105,7 +105,8 @@ export function ListView() {
                         className="iphone-calendar-event-tickets-button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          trackTicketClick(event.id);
+                          const cityLabel = event.state ? `${event.city}, ${event.state}` : event.city;
+                          trackTicketClick(event.id, cityLabel);
                         }}
                       >
                         Tickets

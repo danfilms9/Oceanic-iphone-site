@@ -32,7 +32,7 @@ export default async function handler(
       });
     }
 
-    const { eventId } = req.body as { eventId?: string };
+    const { eventId, title: cityTitle } = req.body as { eventId?: string; title?: string };
     if (!eventId || typeof eventId !== 'string') {
       return res.status(400).json({
         error: 'eventId is required (Notion page ID of the calendar event)',
@@ -45,8 +45,7 @@ export default async function handler(
 
     const dbId = formatNotionId(databaseId);
     const relationPageId = formatNotionId(eventId);
-    const now = new Date();
-    const entryName = `Ticket click ${now.toISOString().slice(0, 19).replace('T', ' ')}`;
+    const entryName = (typeof cityTitle === 'string' && cityTitle.trim()) ? cityTitle.trim() : `Ticket click ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`;
 
     const notion = new Client({ auth: notionApiKey });
 

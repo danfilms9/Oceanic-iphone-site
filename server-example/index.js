@@ -574,7 +574,7 @@ app.post('/api/notion/ticket-click', async (req, res) => {
       return res.status(500).json({ error: 'NOTION_API_KEY or NOTION_BUTTON_CLICKS_DATABASE_ID not configured' });
     }
 
-    const { eventId } = req.body || {};
+    const { eventId, title: cityTitle } = req.body || {};
     if (!eventId || typeof eventId !== 'string') {
       return res.status(400).json({ error: 'eventId is required (Notion page ID of the calendar event)' });
     }
@@ -590,8 +590,7 @@ app.post('/api/notion/ticket-click', async (req, res) => {
     const titleProp = NOTION_BUTTON_CLICKS.titleProperty;
     const calendarRelationProp = NOTION_BUTTON_CLICKS.calendarRelationProperty;
 
-    const now = new Date();
-    const entryName = `Ticket click ${now.toISOString().slice(0, 19).replace('T', ' ')}`;
+    const entryName = (typeof cityTitle === 'string' && cityTitle.trim()) ? cityTitle.trim() : `Ticket click ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`;
 
     await notion.pages.create({
       parent: { database_id: dbId },

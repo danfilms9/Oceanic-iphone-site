@@ -303,19 +303,18 @@ export async function trackButtonClick(buttonId: string): Promise<void> {
 }
 
 /**
- * Logs a ticket link click for a calendar event in the Ticket Clicks Notion database.
- * eventId is the Notion page ID of the calendar event (from the Oceanic Website Calendar).
- * Works for all events automatically; no manual page IDs needed.
+ * Logs a ticket link click for a calendar event in the Button Clicks Notion database.
+ * eventId is the Notion page ID of the calendar event. title (e.g. city name like "Denver") is used as the entry name.
  * Fails silently so tracking doesn't break the app.
  */
-export async function trackTicketClick(eventId: string): Promise<void> {
+export async function trackTicketClick(eventId: string, title?: string): Promise<void> {
   try {
     const response = await fetch('/api/notion/ticket-click', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ eventId }),
+      body: JSON.stringify({ eventId, title }),
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
