@@ -39,8 +39,9 @@ export default async function handler(
       });
     }
 
-    const titleProp = process.env.NOTION_BUTTON_CLICKS_TITLE_PROPERTY || 'Name';
-    const relationProp = process.env.NOTION_BUTTON_RELATION_PROPERTY || 'Button';
+    // Match server-example: Button Clicks DB has "Name" and "Buttons" (relation)
+    const titleProp = 'Name';
+    const relationProp = 'Buttons';
 
     const dbId = formatNotionId(databaseId);
     const relationPageId = formatNotionId(buttonId);
