@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import './EPKPage.css'
 
-const HOLD_MS = 4000
+const HOLD_MS = 2000
 const FADE_SPINNER_MS = 1000
 const FADE_OVERLAY_MS = 1000
 const UNMOUNT_OVERLAY_MS = HOLD_MS + FADE_SPINNER_MS + FADE_OVERLAY_MS
