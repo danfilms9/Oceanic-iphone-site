@@ -36,7 +36,7 @@ export function EPKPage() {
             className={`epk-loading-content ${spinnerAndTextVisible ? '' : 'epk-loading-content--fade-out'}`}
           >
             <div className="epk-loading-spinner" />
-            <span className="epk-loading-text">Loading...</span>
+            <span className="epk-loading-text">LOADING</span>
           </div>
         </div>
       )}
