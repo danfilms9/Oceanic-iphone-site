@@ -3858,6 +3858,11 @@ a.iphone-settings-option {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
+.iphone-music-album-presave-inline-buttons {
+  display: inline-flex;
+  gap: 12px;
+}
+
 .iphone-music-album-presave-inline-btn:hover {
   transform: scale(1.03);
 }

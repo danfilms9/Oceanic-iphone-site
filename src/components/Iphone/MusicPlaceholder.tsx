@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAppNavigation } from './AppNavigationContext';
 import { useMusicDeepLink } from './MusicDeepLinkContext';
 import { unlockAudioContext } from '../../utils/audioUtils';
-import { trackButtonClick, NOTION_BUTTON_IDS } from '../../services/notionService';
+import { fetchAboutInfoFromNotion, type GroupedAboutInfo } from '../../services/aboutService';
 
 type MusicTab = 'playlists' | 'artists' | 'songs' | 'albums' | 'more';
 type ArtistsPage = 'main' | 'oceanic';
@@ -12,6 +12,8 @@ type SongDetailPage = null | 'imyourboy';
 
 const IYB_AUDIO_SRC = '/audio/im-your-boy/IYBFeaturePreview.mp3';
 const IYB_COVER_SRC = '/assets/musicapp/imyourboy_cover.webp';
+const IYB_SPOTIFY_URL = 'https://open.spotify.com/track/4UfCc60LZKRQ628YLcfVqU?si=38357011c81d4488';
+const IYB_APPLE_MUSIC_URL = 'https://music.apple.com/us/artist/oceanic/1374711730';
 
 export function MusicPlaceholder() {
   const [selectedTab, setSelectedTab] = useState<MusicTab>('songs');
@@ -29,8 +31,9 @@ export function MusicPlaceholder() {
   const [showIYBWelcomeOverlay, setShowIYBWelcomeOverlay] = useState(false);
   const [isIYBWelcomeFading, setIsIYBWelcomeFading] = useState(false);
   const iybAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [aboutLinkGroups, setAboutLinkGroups] = useState<GroupedAboutInfo[]>([]);
+  const [areLinksLoading, setAreLinksLoading] = useState(true);
 
-  const IYB_PRESAVE_URL = 'https://distrokid.com/hyperfollow/oceanicandcapitalsoiree/im-your-boy';
   const { openApp, closeApp } = useAppNavigation();
   const { consumeOpenToIYB } = useMusicDeepLink();
 
@@ -43,6 +46,23 @@ export function MusicPlaceholder() {
       setIsIYBWelcomeFading(false);
     }
   }, [consumeOpenToIYB]);
+
+  // Load About page link entries so we can mirror them in the Music app "Links" tab
+  useEffect(() => {
+    const loadAboutLinks = async () => {
+      setAreLinksLoading(true);
+      try {
+        const groups = await fetchAboutInfoFromNotion();
+        setAboutLinkGroups(groups);
+      } catch (error) {
+        console.error('Error loading about links for music app:', error);
+      } finally {
+        setAreLinksLoading(false);
+      }
+    };
+
+    loadAboutLinks();
+  }, []);
 
   const attachIYBAudioListeners = (audio: HTMLAudioElement) => {
     const onTimeUpdate = () => setIybCurrentTime(audio.currentTime);
@@ -63,12 +83,12 @@ export function MusicPlaceholder() {
     setIybDuration(audio.duration || 0);
   }, [songDetailPage]);
 
-  // Show Pre Save popup after 26 seconds, unless user already clicked the inline Pre Save button
+  // Show "listen to full song" popup after 26 seconds of playback
   useEffect(() => {
-    if (isIYBPlaying && iybCurrentTime >= 26 && !hasClickedIYBPreSaveInline) {
+    if (isIYBPlaying && iybCurrentTime >= 26) {
       setShowIYBPreSave(true);
     }
-  }, [isIYBPlaying, iybCurrentTime, hasClickedIYBPreSaveInline]);
+  }, [isIYBPlaying, iybCurrentTime]);
 
   const handleOpenVisualizer = () => {
     closeApp();
@@ -95,23 +115,8 @@ export function MusicPlaceholder() {
   };
 
   const handleIYBPreSaveClick = () => {
-    trackButtonClick(NOTION_BUTTON_IDS.PRE_SAVE);
-    window.open(IYB_PRESAVE_URL, '_blank', 'noopener,noreferrer');
+    window.open(IYB_SPOTIFY_URL, '_blank', 'noopener,noreferrer');
     setTimeout(() => setShowIYBPreSave(false), 3000);
-  };
-
-  const handleIYBDontLikeClick = () => {
-    trackButtonClick(NOTION_BUTTON_IDS.DONT_LIKE_THE_SONG);
-    setShowIYBPreSave(false);
-  };
-
-  const handleIYBPreviewNow = () => {
-    setIsIYBWelcomeFading(true);
-    toggleIYBPlayPause();
-    setTimeout(() => {
-      setShowIYBWelcomeOverlay(false);
-      setIsIYBWelcomeFading(false);
-    }, 350);
   };
 
   const toggleIYBPlayPause = () => {
@@ -144,7 +149,7 @@ export function MusicPlaceholder() {
 
   const getTabTitle = () => {
     if (selectedTab === 'songs' && songDetailPage === 'imyourboy') {
-      return "I'm Your Boy feat ???";
+      return "I'm Your Boy feat Capital Soriee (Preview)";
     }
     if (selectedTab === 'artists' && artistsPage === 'oceanic') {
       return 'Oceanic';
@@ -160,7 +165,7 @@ export function MusicPlaceholder() {
       case 'artists': return 'Artists';
       case 'songs': return 'Songs';
       case 'albums': return 'Albums';
-      case 'more': return 'More';
+      case 'more': return 'Links';
       default: return 'Music';
     }
   };
@@ -394,7 +399,7 @@ export function MusicPlaceholder() {
                   className="iphone-music-item"
                   onClick={handleOpenIYourBoyPage}
                 >
-                  <span className="iphone-music-item-text">I'm Your Boy feat ???</span>
+                  <span className="iphone-music-item-text">I'm Your Boy feat Capital Soriee (Preview)</span>
                   <span className="iphone-music-item-chevron"></span>
                 </button>
               </div>
@@ -435,7 +440,7 @@ export function MusicPlaceholder() {
                   className="iphone-music-item"
                   onClick={handleOpenIYourBoyPage}
                 >
-                  <span className="iphone-music-item-text">I'm Your Boy feat ???</span>
+                  <span className="iphone-music-item-text">I'm Your Boy feat Capital Soriee (Preview)</span>
                   <span className="iphone-music-item-chevron"></span>
                 </button>
               </div>
@@ -445,29 +450,8 @@ export function MusicPlaceholder() {
       case 'songs':
         if (songDetailPage === 'imyourboy') {
           const iybProgress = iybDuration > 0 ? iybCurrentTime / iybDuration : 0;
-          const showWelcomeOverlay = showIYBWelcomeOverlay || isIYBWelcomeFading;
           return (
             <div className="iphone-music-album-page">
-              {showWelcomeOverlay && (
-                <div
-                  className={`iphone-music-album-welcome-overlay ${isIYBWelcomeFading ? 'iphone-music-album-welcome-overlay-fade-out' : ''}`}
-                  role="dialog"
-                  aria-label="New release announcement"
-                >
-                  <div className="iphone-music-album-welcome-popup">
-                    <p className="iphone-music-album-welcome-message">
-                      We are releasing a new version of &quot;I&apos;m Your Boy&quot; with a suprise feature! It comes out this Friday
-                    </p>
-                    <button
-                      type="button"
-                      className="iphone-music-album-welcome-preview-btn"
-                      onClick={handleIYBPreviewNow}
-                    >
-                      Preview Now
-                    </button>
-                  </div>
-                </div>
-              )}
               <img
                 src={IYB_COVER_SRC}
                 alt="I'm Your Boy"
@@ -496,43 +480,52 @@ export function MusicPlaceholder() {
                 </div>
               </div>
               {showIYBPreSave && (
-                <div className="iphone-music-album-presave-overlay" role="dialog" aria-label="Pre-save">
+                <div className="iphone-music-album-presave-overlay" role="dialog" aria-label="Listen to the full song">
                   <div className="iphone-music-album-presave-popup">
                     <p className="iphone-music-album-presave-message">
-                      Pre-save the song to be the first to hear the whole thing
+                      Listen to the full song!
                     </p>
                     <div className="iphone-music-album-presave-popup-buttons">
-                      <button
-                        type="button"
-                        className="iphone-music-album-presave-dontlike-btn"
-                        onClick={handleIYBDontLikeClick}
-                      >
-                        I don&apos;t like the song
-                      </button>
                       <button
                         type="button"
                         className="iphone-music-album-presave-btn"
                         onClick={handleIYBPreSaveClick}
                       >
-                        Pre Save
+                        Spotify
+                      </button>
+                      <button
+                        type="button"
+                        className="iphone-music-album-presave-btn"
+                        onClick={() => {
+                          window.open(IYB_APPLE_MUSIC_URL, '_blank', 'noopener,noreferrer');
+                          setTimeout(() => setShowIYBPreSave(false), 3000);
+                        }}
+                      >
+                        Apple Music
                       </button>
                     </div>
                   </div>
                 </div>
               )}
               <div className="iphone-music-album-presave-inline">
-                <a
-                  href={IYB_PRESAVE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="iphone-music-album-presave-inline-btn"
-                  onClick={() => {
-                    setHasClickedIYBPreSaveInline(true);
-                    trackButtonClick(NOTION_BUTTON_IDS.PRE_SAVE);
-                  }}
-                >
-                  Pre Save
-                </a>
+                <div className="iphone-music-album-presave-inline-buttons">
+                  <a
+                    href={IYB_SPOTIFY_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="iphone-music-album-presave-inline-btn"
+                  >
+                    Spotify
+                  </a>
+                  <a
+                    href={IYB_APPLE_MUSIC_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="iphone-music-album-presave-inline-btn iphone-music-album-presave-inline-btn-secondary"
+                  >
+                    Apple Music
+                  </a>
+                </div>
               </div>
             </div>
           );
@@ -550,7 +543,7 @@ export function MusicPlaceholder() {
               className="iphone-music-item"
               onClick={handleOpenIYourBoyPage}
             >
-              <span className="iphone-music-item-text">I'm Your Boy feat ???</span>
+              <span className="iphone-music-item-text">I'm Your Boy feat Capital Soriee (Preview)</span>
               <span className="iphone-music-item-chevron"></span>
             </button>
           </div>
@@ -589,7 +582,7 @@ export function MusicPlaceholder() {
                   className="iphone-music-item"
                   onClick={handleOpenIYourBoyPage}
                 >
-                  <span className="iphone-music-item-text">I'm Your Boy feat ???</span>
+                  <span className="iphone-music-item-text">I'm Your Boy feat Capital Soriee (Preview)</span>
                   <span className="iphone-music-item-chevron"></span>
                 </button>
               </div>
@@ -599,7 +592,99 @@ export function MusicPlaceholder() {
       case 'more':
         return (
           <div className="iphone-music-list">
-            {/* Empty for now */}
+            {areLinksLoading ? (
+              <button className="iphone-music-item" disabled>
+                <span className="iphone-music-item-text">Loading...</span>
+              </button>
+            ) : (
+              (() => {
+                // Only include links from group "1" (filter out group "2" and others)
+                const allGroupOneLinks = aboutLinkGroups
+                  .filter(group => group.group === '1')
+                  .flatMap(group => group.entries.filter(entry => entry.url));
+
+                if (allGroupOneLinks.length === 0) {
+                  return (
+                    <button className="iphone-music-item" disabled>
+                      <span className="iphone-music-item-text">No links available</span>
+                    </button>
+                  );
+                }
+
+                // Order: Spotify + Apple Music first (Streaming), then the rest (Social)
+                const isSpotify = (title: string) => title.toLowerCase() === 'spotify';
+                const isAppleMusic = (title: string) => title.toLowerCase() === 'apple music';
+                const isInstagram = (title: string) => title.toLowerCase() === 'instagram';
+
+                const streamingLinks = allGroupOneLinks.filter(
+                  entry => isSpotify(entry.title) || isAppleMusic(entry.title)
+                );
+                const remainingLinks = allGroupOneLinks.filter(
+                  entry => !streamingLinks.includes(entry)
+                );
+
+                const socialLinks = remainingLinks;
+
+                const rows: React.ReactNode[] = [];
+
+                if (streamingLinks.length > 0) {
+                  rows.push(
+                    <div key="streaming-header" className="iphone-music-item iphone-music-item-header">
+                      <span className="iphone-music-item-text">
+                        <strong>Streaming</strong>
+                      </span>
+                    </div>
+                  );
+
+                  streamingLinks.forEach((entry) => {
+                    rows.push(
+                      <button
+                        key={`streaming-${entry.title + (entry.url ?? '')}`}
+                        className="iphone-music-item"
+                        onClick={() => {
+                          if (entry.url) {
+                            window.open(entry.url, '_blank', 'noopener,noreferrer');
+                          }
+                        }}
+                      >
+                        <span className="iphone-music-item-text">{entry.title}</span>
+                        <span className="iphone-music-item-chevron"></span>
+                      </button>
+                    );
+                  });
+                }
+
+                if (socialLinks.length > 0) {
+                  // Add Social header row before the first Instagram / social link
+                  rows.push(
+                    <div key="social-header" className="iphone-music-item iphone-music-item-header">
+                      <span className="iphone-music-item-text">
+                        <strong>Social</strong>
+                      </span>
+                    </div>
+                  );
+
+                  socialLinks.forEach((entry) => {
+                    rows.push(
+                      <button
+                        key={`social-${entry.title + (entry.url ?? '')}`}
+                        className="iphone-music-item"
+                        onClick={() => {
+                          if (entry.url) {
+                            window.open(entry.url, '_blank', 'noopener,noreferrer');
+                          }
+                        }}
+                      >
+                        <span className="iphone-music-item-text">{entry.title}</span>
+                        <span className="iphone-music-item-chevron"></span>
+                      </button>
+                    );
+                  });
+                }
+
+                return rows;
+              })()
+            )}
           </div>
         );
       default:
