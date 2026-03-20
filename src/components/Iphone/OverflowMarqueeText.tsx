@@ -33,12 +33,20 @@ export function OverflowMarqueeText({
     };
 
     measure();
+    const raf = requestAnimationFrame(measure);
+    const t1 = setTimeout(measure, 120);
+    const t2 = setTimeout(measure, 400);
+    const t3 = setTimeout(measure, 800);
     const observer = new ResizeObserver(measure);
     if (containerRef.current) observer.observe(containerRef.current);
     if (textRef.current) observer.observe(textRef.current);
     window.addEventListener('resize', measure);
 
     return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
       observer.disconnect();
       window.removeEventListener('resize', measure);
     };
