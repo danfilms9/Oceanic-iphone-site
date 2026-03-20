@@ -16,6 +16,8 @@ export function TitleBar({
   onBack,
   rightButton 
 }: TitleBarProps) {
+  const titleClassName = `iphone-title-bar-title ${showBackButton ? 'iphone-title-bar-title-with-back' : ''}`.trim();
+
   return (
     <div className="iphone-title-bar">
       {showBackButton && (
@@ -33,7 +35,7 @@ export function TitleBar({
         </button>
       )}
       <div className="iphone-title-bar-title-container">
-        <h1 className="iphone-title-bar-title">
+        <h1 className={titleClassName}>
           <OverflowMarqueeText
             text={title}
             containerClassName="iphone-title-bar-marquee"

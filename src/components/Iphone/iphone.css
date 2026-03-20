@@ -4354,6 +4354,14 @@ a.iphone-settings-option {
     0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
+.iphone-title-bar-title-with-back {
+  left: 0;
+  transform: translateY(-50%);
+  text-align: left;
+  padding-left: 150px;
+  padding-right: 16px;
+}
+
 .iphone-title-bar-marquee {
   display: block;
   width: min(80%, 100%);
