@@ -5038,21 +5038,21 @@ a.iphone-settings-option {
   white-space: nowrap;
 }
 
-.iphone-overflow-marquee-track {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--iphone-marquee-gap, 48px);
-  animation: iphone-overflow-marquee var(--iphone-marquee-duration, 10s) linear infinite;
-  animation-delay: 1s;
+.iphone-overflow-title-scrolling {
+  display: inline-block;
+  animation: iphone-overflow-title-scroll 12s infinite linear;
   will-change: transform;
 }
 
-@keyframes iphone-overflow-marquee {
-  from {
+@keyframes iphone-overflow-title-scroll {
+  0%, 20% {
     transform: translateX(0);
   }
-  to {
-    transform: translateX(calc(-1 * var(--iphone-marquee-distance, 0px)));
+  30%, 70% {
+    transform: translateX(calc(-1 * var(--scroll-distance, 0px)));
+  }
+  80%, 100% {
+    transform: translateX(0);
   }
 }
 

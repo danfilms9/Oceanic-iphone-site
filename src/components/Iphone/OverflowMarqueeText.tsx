@@ -4,21 +4,19 @@ interface OverflowMarqueeTextProps {
   text: string;
   containerClassName?: string;
   textClassName?: string;
-  gapPx?: number;
-  pixelsPerSecond?: number;
+  endPaddingPx?: number;
 }
 
 export function OverflowMarqueeText({
   text,
   containerClassName,
   textClassName,
-  gapPx = 48,
-  pixelsPerSecond = 45,
+  endPaddingPx = 20,
 }: OverflowMarqueeTextProps) {
   const containerRef = useRef<HTMLSpanElement | null>(null);
   const textRef = useRef<HTMLSpanElement | null>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
-  const [distancePx, setDistancePx] = useState(0);
+  const [scrollDistancePx, setScrollDistancePx] = useState(0);
 
   useEffect(() => {
     const measure = () => {
@@ -31,7 +29,7 @@ export function OverflowMarqueeText({
       const overflowing = textWidth > containerWidth + 1;
 
       setIsOverflowing(overflowing);
-      setDistancePx(overflowing ? textWidth + gapPx : 0);
+      setScrollDistancePx(overflowing ? textWidth - containerWidth + endPaddingPx : 0);
     };
 
     measure();
@@ -44,13 +42,10 @@ export function OverflowMarqueeText({
       observer.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [text, gapPx]);
+  }, [text, endPaddingPx]);
 
-  const durationSec = Math.max(6, distancePx / pixelsPerSecond);
   const marqueeStyle = {
-    '--iphone-marquee-distance': `${distancePx}px`,
-    '--iphone-marquee-duration': `${durationSec}s`,
-    '--iphone-marquee-gap': `${gapPx}px`,
+    '--scroll-distance': `${scrollDistancePx}px`,
   } as CSSProperties;
 
   return (
@@ -58,20 +53,13 @@ export function OverflowMarqueeText({
       ref={containerRef}
       className={`iphone-overflow-marquee ${containerClassName ?? ''}`.trim()}
     >
-      {isOverflowing ? (
-        <span className="iphone-overflow-marquee-track" style={marqueeStyle}>
-          <span ref={textRef} className={textClassName}>
-            {text}
-          </span>
-          <span className={textClassName} aria-hidden>
-            {text}
-          </span>
-        </span>
-      ) : (
-        <span ref={textRef} className={textClassName}>
-          {text}
-        </span>
-      )}
+      <span
+        ref={textRef}
+        className={`${textClassName ?? ''} ${isOverflowing ? 'iphone-overflow-title-scrolling' : ''}`.trim()}
+        style={isOverflowing ? marqueeStyle : undefined}
+      >
+        {text}
+      </span>
     </span>
   );
 }
