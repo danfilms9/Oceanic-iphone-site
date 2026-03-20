@@ -45,6 +45,12 @@ export interface MerchProduct {
   variants?: MerchProductVariant[];
 }
 
+const TOUR_SHIRT_NAME_PATTERN = /north\s*american?\s*tour.*shirt|tour.*shirt.*north\s*american?/i;
+
+export function isNorthAmericaTourShirt(product: Pick<MerchProduct, 'name'>): boolean {
+  return TOUR_SHIRT_NAME_PATTERN.test(product.name);
+}
+
 /** Get the value for an option (e.g. "Size") from a variant's selectedOptions */
 export function getVariantOptionValue(variant: MerchProductVariant, optionName: string): string | null {
   const opt = variant.selectedOptions?.find((o) => o.name === optionName);

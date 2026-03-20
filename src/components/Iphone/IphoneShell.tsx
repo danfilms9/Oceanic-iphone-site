@@ -51,6 +51,7 @@ function IphoneShellContent() {
   const { setOpenToIYB } = useMusicDeepLink();
   const isTourDeepLink = location.pathname === '/tour';
   const isMerchDeepLink = location.pathname === '/merch';
+  const isTourShirtDeepLink = location.pathname === '/tourshirt';
   const isMailDeepLink = location.pathname === '/mail';
   const isNewsongDeepLink = location.pathname === '/newsong';
   const { wallpaper } = useWallpaper();
@@ -63,7 +64,7 @@ function IphoneShellContent() {
     visualizerLoadedRef.current = visualizerLoaded;
   }, [visualizerLoaded]);
   const { isDetailView: isNotesDetailView } = useNotes();
-  const [isLocked, setIsLocked] = useState(!(isTourDeepLink || isMerchDeepLink || isMailDeepLink));
+  const [isLocked, setIsLocked] = useState(!(isTourDeepLink || isMerchDeepLink || isTourShirtDeepLink || isMailDeepLink));
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [time, setTime] = useState(formatTime);
@@ -79,6 +80,7 @@ function IphoneShellContent() {
   const pendingAppIdRef = useRef<string | null>(null);
   const tourDeepLinkAppliedRef = useRef(false);
   const merchDeepLinkAppliedRef = useRef(false);
+  const tourShirtDeepLinkAppliedRef = useRef(false);
   const mailDeepLinkAppliedRef = useRef(false);
   const newsongDeepLinkAppliedRef = useRef(false);
   const [isAppClosing, setIsAppClosing] = useState(false);
@@ -209,6 +211,18 @@ function IphoneShellContent() {
     }, 600); // Let home screen and dock/apps appear first
     return () => clearTimeout(timer);
   }, [isMerchDeepLink, isLocked, activeAppId, pendingAppId]);
+
+  // Deep link: /tourshirt → open merch app once after home screen is visible
+  useEffect(() => {
+    if (!isTourShirtDeepLink || isLocked || activeAppId || pendingAppId || tourShirtDeepLinkAppliedRef.current) return;
+    tourShirtDeepLinkAppliedRef.current = true;
+    const timer = setTimeout(() => {
+      setShouldAnimateOut(true);
+      setPendingAppId('merch');
+      pendingAppIdRef.current = 'merch';
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [isTourShirtDeepLink, isLocked, activeAppId, pendingAppId]);
 
   // Deep link: /mail → open e-mail list app once after home screen is visible (same behavior as /tour)
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { getMerchProductImageUrl } from '../../types/merch';
 import type { MerchProduct } from '../../types/merch';
 import { MerchImage } from './MerchImage';
+import { OverflowMarqueeText } from './OverflowMarqueeText';
 
 interface MerchListViewProps {
   products: MerchProduct[];
@@ -35,7 +36,12 @@ export function MerchListView({ products, onProductSelect }: MerchListViewProps)
 
             {/* Product name */}
             <div className="iphone-calendar-event-content">
-              <div className="iphone-calendar-event-title">{product.name}</div>
+              <div className="iphone-calendar-event-title">
+                <OverflowMarqueeText
+                  text={product.name}
+                  containerClassName="iphone-merch-list-title-marquee"
+                />
+              </div>
             </div>
 
             {/* Same chevron as Photos app main page */}

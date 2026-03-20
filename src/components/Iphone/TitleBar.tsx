@@ -1,4 +1,5 @@
 import React from 'react';
+import { OverflowMarqueeText } from './OverflowMarqueeText';
 
 interface TitleBarProps {
   title: string;
@@ -33,7 +34,11 @@ export function TitleBar({
       )}
       <div className="iphone-title-bar-title-container">
         <h1 className="iphone-title-bar-title">
-          {title}
+          <OverflowMarqueeText
+            text={title}
+            containerClassName="iphone-title-bar-marquee"
+            textClassName="iphone-title-bar-title-text"
+          />
         </h1>
       </div>
       {rightButton && (

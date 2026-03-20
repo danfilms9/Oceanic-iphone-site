@@ -4353,6 +4353,16 @@ a.iphone-settings-option {
     0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
+.iphone-title-bar-marquee {
+  display: block;
+  width: min(80%, 100%);
+  margin: 0 auto;
+}
+
+.iphone-title-bar-title-text {
+  display: inline-block;
+}
+
 /* Back Button */
 .iphone-title-bar-back-button {
   position: absolute;
@@ -5018,6 +5028,36 @@ a.iphone-settings-option {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.iphone-overflow-marquee {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.iphone-overflow-marquee-track {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iphone-marquee-gap, 48px);
+  animation: iphone-overflow-marquee var(--iphone-marquee-duration, 10s) linear infinite;
+  animation-delay: 1s;
+  will-change: transform;
+}
+
+@keyframes iphone-overflow-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-1 * var(--iphone-marquee-distance, 0px)));
+  }
+}
+
+.iphone-merch-list-title-marquee {
+  width: 100%;
 }
 
 .iphone-calendar-event-subtitle {

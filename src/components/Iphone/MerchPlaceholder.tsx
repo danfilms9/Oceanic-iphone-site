@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { TitleBar } from './TitleBar';
 import { BottomBar } from './BottomBar';
 import { MerchListView } from './MerchListView';
@@ -8,16 +9,18 @@ import { MerchCartView } from './MerchCartView';
 import { useMerchProducts } from '../../hooks/useMerchProducts';
 import { useMerchCart } from '../../hooks/useMerchCart';
 import { trackButtonClick, NOTION_BUTTON_IDS } from '../../services/notionService';
-import type { MerchProduct } from '../../types/merch';
+import { isNorthAmericaTourShirt, type MerchProduct } from '../../types/merch';
 
 type MerchView = 'list' | 'all' | 'cart';
 
 export function MerchPlaceholder() {
+  const location = useLocation();
   const { products, loading, error } = useMerchProducts();
   const { cart, addToCart, removeFromCart, updateQuantity, loading: cartLoading, lineCount, removingLineId, updatingLineId } = useMerchCart();
   const [currentView, setCurrentView] = useState<MerchView>('list');
   const [selectedProduct, setSelectedProduct] = useState<MerchProduct | null>(null);
   const [expandedMedia, setExpandedMedia] = useState<ExpandedMediaPayload | null>(null);
+  const tourShirtDeepLinkAppliedRef = useRef(false);
 
   const handleViewChange = (view: MerchView) => {
     setCurrentView(view);
@@ -30,6 +33,15 @@ export function MerchPlaceholder() {
   const handleProductBack = () => {
     setSelectedProduct(null);
   };
+
+  useEffect(() => {
+    if (location.pathname !== '/tourshirt' || loading || tourShirtDeepLinkAppliedRef.current) return;
+    const tourShirtProduct = products.find((p) => isNorthAmericaTourShirt(p));
+    if (!tourShirtProduct) return;
+    setCurrentView('list');
+    setSelectedProduct(tourShirtProduct);
+    tourShirtDeepLinkAppliedRef.current = true;
+  }, [location.pathname, loading, products]);
 
   if (selectedProduct) {
     return (
