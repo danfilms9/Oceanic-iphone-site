@@ -2,7 +2,7 @@
  * Scale factor for the ocean base sphere only (country polygons use full globe radius).
  * Values below 1 shrink the blue sphere while land size stays the same.
  */
-export const OCEAN_SPHERE_SCALE = 0.99
+export const OCEAN_SPHERE_SCALE = 0.995
 
 /**
  * @param {import('globe.gl').GlobeInstance | undefined} inst
