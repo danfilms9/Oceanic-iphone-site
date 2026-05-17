@@ -9,6 +9,7 @@ import { YoutubePlaceholder } from '../components/Iphone/YoutubePlaceholder';
 import { SettingsPlaceholder } from '../components/Iphone/SettingsPlaceholder';
 import { MusicPlaceholder } from '../components/Iphone/MusicPlaceholder';
 import { VisualizerApp } from '../components/VisualizerApp';
+import { MapsPlaceholder } from '../components/Iphone/MapsPlaceholder';
 
 /**
  * App definitions for the iPhone home screen.
@@ -31,6 +32,7 @@ export const APP_REGISTRY: AppDef[] = [
   { id: 'notes', label: 'Notes', iconPath: '/assets/apps/Notes.webp', component: NotesPlaceholder },
   { id: 'music', label: 'Music', iconPath: '/assets/apps/Music.webp', component: MusicPlaceholder },
   { id: 'settings', label: 'Settings', iconPath: '/assets/apps/Settings.webp', component: SettingsPlaceholder },
+  { id: 'maps', label: 'Maps', iconPath: '/assets/icons/Maps.webp', component: MapsPlaceholder },
   { id: 'visualizer', label: 'Visualizer', iconPath: '/assets/apps/Music.webp', component: VisualizerApp },
 ];
 

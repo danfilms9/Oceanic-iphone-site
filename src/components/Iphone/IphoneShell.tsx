@@ -50,6 +50,7 @@ function IphoneShellContent() {
   const navigate = useNavigate();
   const { setOpenToIYB } = useMusicDeepLink();
   const isTourDeepLink = location.pathname === '/tour';
+  const isMapsDeepLink = location.pathname === '/maps';
   const isMerchDeepLink = location.pathname === '/merch';
   const isTourShirtDeepLink = location.pathname === '/tourshirt';
   const isMailDeepLink = location.pathname === '/mail';
@@ -64,7 +65,9 @@ function IphoneShellContent() {
     visualizerLoadedRef.current = visualizerLoaded;
   }, [visualizerLoaded]);
   const { isDetailView: isNotesDetailView } = useNotes();
-  const [isLocked, setIsLocked] = useState(!(isTourDeepLink || isMerchDeepLink || isTourShirtDeepLink || isMailDeepLink));
+  const [isLocked, setIsLocked] = useState(
+    !(isTourDeepLink || isMapsDeepLink || isMerchDeepLink || isTourShirtDeepLink || isMailDeepLink),
+  );
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [time, setTime] = useState(formatTime);
@@ -79,6 +82,7 @@ function IphoneShellContent() {
   const [pendingAppId, setPendingAppId] = useState<string | null>(null);
   const pendingAppIdRef = useRef<string | null>(null);
   const tourDeepLinkAppliedRef = useRef(false);
+  const mapsDeepLinkAppliedRef = useRef(false);
   const merchDeepLinkAppliedRef = useRef(false);
   const tourShirtDeepLinkAppliedRef = useRef(false);
   const mailDeepLinkAppliedRef = useRef(false);
@@ -199,6 +203,18 @@ function IphoneShellContent() {
     }, 600); // Let home screen and dock/apps appear first
     return () => clearTimeout(timer);
   }, [isTourDeepLink, isLocked, activeAppId, pendingAppId]);
+
+  // Deep link: /maps → open maps app once after home screen is visible (same behavior as /tour)
+  useEffect(() => {
+    if (!isMapsDeepLink || isLocked || activeAppId || pendingAppId || mapsDeepLinkAppliedRef.current) return;
+    mapsDeepLinkAppliedRef.current = true;
+    const timer = setTimeout(() => {
+      setShouldAnimateOut(true);
+      setPendingAppId('maps');
+      pendingAppIdRef.current = 'maps';
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [isMapsDeepLink, isLocked, activeAppId, pendingAppId]);
 
   // Deep link: /merch → open merch app once after home screen is visible (same behavior as /tour)
   useEffect(() => {

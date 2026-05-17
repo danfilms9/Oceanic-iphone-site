@@ -238,7 +238,7 @@ app.post('/api/notion/email-entries', async (req, res) => {
       return res.status(500).json({ error: 'NOTION_EMAIL_DATABASE_ID not configured' });
     }
 
-    const { firstName, lastName, email } = req.body;
+    const { firstName, lastName, email, city } = req.body;
 
     if (!firstName || !lastName || !email) {
       return res.status(400).json({ 
@@ -286,6 +286,15 @@ app.post('/api/notion/email-entries', async (req, res) => {
             },
           ],
         },
+        ...(city && String(city).trim()
+          ? {
+              City: {
+                select: {
+                  name: String(city).trim(),
+                },
+              },
+            }
+          : {}),
       },
     });
 

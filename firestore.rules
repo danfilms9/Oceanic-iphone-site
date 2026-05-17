@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /pins/{pinId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['city','country','lat','lng','createdAt'])
+        && request.resource.data.lat is number
+        && request.resource.data.lng is number
+        && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+        && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
+        && request.resource.data.city is string
+        && request.resource.data.city.size() < 100
+        && request.resource.data.country is string
+        && request.resource.data.country.size() < 100;
+      allow update, delete: if false;
+    }
+
+    match /subscribers/{subId} {
+      allow read: if false;
+      allow create: if request.resource.data.keys().hasOnly(['firstName','lastName','email','city','country','createdAt'])
+        && request.resource.data.firstName is string
+        && request.resource.data.firstName.size() > 0
+        && request.resource.data.firstName.size() < 100
+        && request.resource.data.lastName is string
+        && request.resource.data.lastName.size() > 0
+        && request.resource.data.lastName.size() < 100
+        && request.resource.data.email is string
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && request.resource.data.email.size() < 254
+        && request.resource.data.city is string
+        && request.resource.data.country is string;
+      allow update, delete: if false;
+    }
+  }
+}

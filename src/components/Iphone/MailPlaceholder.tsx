@@ -1,22 +1,31 @@
 import { useState } from 'react';
 import { TitleBar } from './TitleBar';
 import { BottomBar } from './BottomBar';
-import { submitEmailEntry } from '../../services/emailService';
+import { CityAutocomplete } from '../FanMap/CityAutocomplete.jsx';
+import { submitFanSignup } from '../../lib/fanSignup.js';
+import '@geoapify/geocoder-autocomplete/styles/minimal.css';
 
 export function MailPlaceholder() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [selectedPlace, setSelectedPlace] = useState<{
+    city: string;
+    country: string;
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [cityAutocompleteKey, setCityAutocompleteKey] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!firstName.trim() || !lastName.trim() || !email.trim()) {
       setSubmitStatus('error');
-      setErrorMessage('Please fill in all fields');
+      setErrorMessage('Please fill in your name and email.');
       return;
     }
 
@@ -25,13 +34,18 @@ export function MailPlaceholder() {
     setErrorMessage('');
 
     try {
-      await submitEmailEntry({ firstName, lastName, email });
+      await submitFanSignup({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        place: selectedPlace,
+      });
       setSubmitStatus('success');
-      // Clear form
       setFirstName('');
       setLastName('');
+      setSelectedPlace(null);
+      setCityAutocompleteKey((k) => k + 1);
       setEmail('');
-      // Reset status after 3 seconds
       setTimeout(() => {
         setSubmitStatus('idle');
         setErrorMessage('');
@@ -39,7 +53,11 @@ export function MailPlaceholder() {
     } catch (error) {
       console.error('Error submitting form:', error);
       setSubmitStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to submit entry. Please try again.');
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Failed to submit entry. Please try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -48,14 +66,11 @@ export function MailPlaceholder() {
   return (
     <div className="iphone-mail">
       <TitleBar title="E-mail List" />
-      
-      {/* Content Area */}
+
       <div className="iphone-mail-content">
         <form onSubmit={handleSubmit} className="iphone-mail-form">
-          {/* Stay Updated Text */}
           <div className="iphone-mail-stay-updated">Stay Updated</div>
-          
-          {/* Form Fields */}
+
           <div className="iphone-settings-options iphone-mail-form-container">
             <div className="iphone-mail-form-divider"></div>
             <div className="iphone-settings-option iphone-settings-option-top iphone-mail-form-field">
@@ -66,6 +81,7 @@ export function MailPlaceholder() {
                 onChange={(e) => setFirstName(e.target.value)}
                 className="iphone-mail-form-input"
                 placeholder="Johnny"
+                disabled={isSubmitting}
               />
             </div>
             <div className="iphone-settings-option iphone-settings-option-middle-three iphone-mail-form-field">
@@ -76,6 +92,7 @@ export function MailPlaceholder() {
                 onChange={(e) => setLastName(e.target.value)}
                 className="iphone-mail-form-input"
                 placeholder="Appleseed"
+                disabled={isSubmitting}
               />
             </div>
             <div className="iphone-settings-option iphone-settings-option-bottom-three iphone-mail-form-field">
@@ -86,11 +103,27 @@ export function MailPlaceholder() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="iphone-mail-form-input"
                 placeholder="japples@gmail.com"
+                disabled={isSubmitting}
+                autoComplete="email"
               />
             </div>
           </div>
 
-          {/* Submit Button */}
+          <section className="iphone-mail-city-section" aria-label="City (optional)">
+            <h2 className="iphone-mail-city-heading">
+              City <span className="iphone-mail-city-optional">(optional)</span>
+            </h2>
+            <div className="iphone-mail-city-card">
+              <CityAutocomplete
+                key={cityAutocompleteKey}
+                className="iphone-mail-geocoder"
+                placeholder="Oceanville"
+                disabled={isSubmitting}
+                onSelect={(place) => setSelectedPlace(place)}
+              />
+            </div>
+          </section>
+
           <button
             type="submit"
             disabled={isSubmitting}
@@ -99,7 +132,6 @@ export function MailPlaceholder() {
             {isSubmitting ? 'Submitting...' : 'Submit'}
           </button>
 
-          {/* Status Message */}
           {submitStatus === 'success' && (
             <div className="iphone-mail-status iphone-mail-status-success">
               Success! Now go have a great day!
@@ -107,24 +139,22 @@ export function MailPlaceholder() {
           )}
           {submitStatus === 'error' && (
             <div className="iphone-mail-status iphone-mail-status-error">
-              {errorMessage || 'Please fill in all fields'}
+              {errorMessage || 'Please fill in your name and email.'}
             </div>
           )}
         </form>
       </div>
 
-      {/* Bottom Navigation Bar */}
       <BottomBar
         centerContent={
           <div className="iphone-calendar-segmented-control">
             <button
+              type="button"
               className="iphone-calendar-segmented-button iphone-calendar-segmented-button-selected"
             >
               Inbox
             </button>
-            <button
-              className="iphone-calendar-segmented-button"
-            >
+            <button type="button" className="iphone-calendar-segmented-button">
               Sent
             </button>
           </div>

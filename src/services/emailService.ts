@@ -6,6 +6,7 @@ export interface EmailEntry {
   firstName: string;
   lastName: string;
   email: string;
+  city?: string;
 }
 
 /**

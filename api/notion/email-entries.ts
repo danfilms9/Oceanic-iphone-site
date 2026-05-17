@@ -1,10 +1,21 @@
 import { Client } from '@notionhq/client';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import {
+  buildEmailEntryNotionProperties,
+  formatNotionDatabaseId,
+} from './emailEntryProperties';
 
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -19,7 +30,7 @@ export default async function handler(
       });
     }
 
-    const { firstName, lastName, email } = req.body;
+    const { firstName, lastName, email, city } = req.body ?? {};
 
     if (!firstName || !lastName || !email) {
       return res.status(400).json({
@@ -28,10 +39,7 @@ export default async function handler(
       });
     }
 
-    // Format database ID with dashes if needed
-    if (databaseId.length === 32 && !databaseId.includes('-')) {
-      databaseId = `${databaseId.slice(0, 8)}-${databaseId.slice(8, 12)}-${databaseId.slice(12, 16)}-${databaseId.slice(16, 20)}-${databaseId.slice(20)}`;
-    }
+    databaseId = formatNotionDatabaseId(databaseId);
 
     const notion = new Client({ auth: notionApiKey });
 
@@ -39,35 +47,12 @@ export default async function handler(
       parent: {
         database_id: databaseId,
       },
-      properties: {
-        'First Name': {
-          rich_text: [
-            {
-              text: {
-                content: firstName,
-              },
-            },
-          ],
-        },
-        'Last Name': {
-          title: [
-            {
-              text: {
-                content: lastName,
-              },
-            },
-          ],
-        },
-        'Email': {
-          rich_text: [
-            {
-              text: {
-                content: email,
-              },
-            },
-          ],
-        },
-      },
+      properties: buildEmailEntryNotionProperties(
+        String(firstName).trim(),
+        String(lastName).trim(),
+        String(email).trim(),
+        city ? String(city).trim() : undefined,
+      ),
     });
 
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -75,11 +60,12 @@ export default async function handler(
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     return res.status(200).json({ success: true, id: response.id });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Notion API error:', error);
     return res.status(500).json({
       error: 'Failed to create email entry',
-      message: error.message,
+      message,
     });
   }
 }
