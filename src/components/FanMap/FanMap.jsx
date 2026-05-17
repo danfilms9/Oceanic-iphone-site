@@ -13,6 +13,9 @@ const MAX_PINS_PER_BROWSER = 3
 const THANKS_VISIBLE_MS = 5000
 const THANKS_FADE_MS = 600
 
+const MAPS_HEADING =
+  'Drop a pin in your city to let us know where we should play our music songs next.'
+
 function readPinDropCount() {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
@@ -121,18 +124,17 @@ export function FanMap({ layout = 'default' }) {
               <div className="fanmap-ios-settings-options-align">
                 <div className="fanmap-ios-settings-group" role="group">
                   <div className="fanmap-ios-settings-row fanmap-ios-settings-row--content">
-                    <p className="fanmap-music-lead">Drop a pin in your city to let us know where we should play our music songs next.</p>
-                    <PinForm disabled={formDisabled} onDropPin={handleDropPin} />
+                    <p
+                      className={`fanmap-music-lead${thanksFading ? ' fanmap-music-lead--fading' : ''}`}
+                      role={thanksMessage ? 'status' : undefined}
+                    >
+                      {thanksMessage ?? MAPS_HEADING}
+                    </p>
+                    {!thanksMessage && (
+                      <PinForm disabled={formDisabled} onDropPin={handleDropPin} />
+                    )}
                   </div>
                 </div>
-                {thanksMessage && (
-                  <p
-                    className={`fanmap-thanks fanmap-thanks--overlay${thanksFading ? ' fanmap-thanks--fading' : ''}`}
-                    role="status"
-                  >
-                    {thanksMessage}
-                  </p>
-                )}
               </div>
             </div>
           </div>
@@ -141,22 +143,20 @@ export function FanMap({ layout = 'default' }) {
         <>
           <div className="fanmap-header">
             <h1 className="fanmap-title">Maps</h1>
-            <p className="fanmap-lead">Drop a pin in your city to let us know where we should play our music songs next.</p>
+            <p
+              className={`fanmap-lead${thanksFading ? ' fanmap-lead--fading' : ''}`}
+              role={thanksMessage ? 'status' : undefined}
+            >
+              {thanksMessage ?? MAPS_HEADING}
+            </p>
           </div>
 
           <div className="fanmap-layout">
             <Globe ref={globeRef} pins={displayPins} theme="dark" />
-            <PinForm disabled={formDisabled} onDropPin={handleDropPin} />
+            {!thanksMessage && (
+              <PinForm disabled={formDisabled} onDropPin={handleDropPin} />
+            )}
           </div>
-
-          {thanksMessage && (
-            <p
-              className={`fanmap-thanks${thanksFading ? ' fanmap-thanks--fading' : ''}`}
-              role="status"
-            >
-              {thanksMessage}
-            </p>
-          )}
         </>
       )}
 
