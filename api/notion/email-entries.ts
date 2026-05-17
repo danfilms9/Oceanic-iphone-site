@@ -1,9 +1,9 @@
 import { Client } from '@notionhq/client';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
-  buildEmailEntryNotionProperties,
+  createEmailEntryPage,
   formatNotionDatabaseId,
-} from './emailEntryProperties';
+} from './emailEntryProperties.js';
 
 export default async function handler(
   req: VercelRequest,
@@ -43,17 +43,14 @@ export default async function handler(
 
     const notion = new Client({ auth: notionApiKey });
 
-    const response = await notion.pages.create({
-      parent: {
-        database_id: databaseId,
-      },
-      properties: buildEmailEntryNotionProperties(
-        String(firstName).trim(),
-        String(lastName).trim(),
-        String(email).trim(),
-        city ? String(city).trim() : undefined,
-      ),
-    });
+    const response = await createEmailEntryPage(
+      notion,
+      databaseId,
+      String(firstName).trim(),
+      String(lastName).trim(),
+      String(email).trim(),
+      city ? String(city).trim() : undefined,
+    );
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

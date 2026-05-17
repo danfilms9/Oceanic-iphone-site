@@ -6083,6 +6083,19 @@ a.iphone-settings-option {
   font-weight: 300;
 }
 
+.iphone-mail-form-city-input {
+  flex: 1;
+  flex-basis: 59%;
+  min-width: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.iphone-mail-city-optional {
+  font-weight: 400;
+  color: #666666;
+}
+
 .iphone-mail-submit-button {
   width: 90%;
   height: 88px;
@@ -6147,37 +6160,6 @@ a.iphone-settings-option {
   border: 1px solid rgba(255, 59, 48, 0.3);
 }
 
-.iphone-mail-city-section {
-  width: 90%;
-  margin-top: 28px;
-  box-sizing: border-box;
-}
-
-.iphone-mail-city-heading {
-  margin: 0 0 12px;
-  font-size: 26px;
-  font-weight: 600;
-  color: #000000;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  text-align: center;
-}
-
-.iphone-mail-city-optional {
-  font-weight: 400;
-  color: #666666;
-}
-
-.iphone-mail-city-card {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #cccccc;
-  border-radius: 18px;
-  padding: 16px 18px;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
 .iphone-mail-geocoder {
   width: 100%;
 }
@@ -6185,14 +6167,18 @@ a.iphone-settings-option {
 .iphone-mail-geocoder .geoapify-autocomplete-input {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #cccccc;
-  border-radius: 10px;
-  background: #ffffff;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: #000000;
   font-size: 21px;
   font-weight: 400;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  padding: 14px 16px;
+  -webkit-font-smoothing: antialiased;
+  padding: 0;
+  outline: none;
+  text-align: justify;
+  line-height: 1.4;
 }
 
 .iphone-mail-geocoder .geoapify-autocomplete-input::placeholder {
@@ -6201,9 +6187,8 @@ a.iphone-settings-option {
 }
 
 .iphone-mail-geocoder .geoapify-autocomplete-input:focus {
-  border-color: #007aff;
   outline: none;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.25);
+  box-shadow: none;
 }
 
 .iphone-mail-geocoder .geoapify-autocomplete-items {

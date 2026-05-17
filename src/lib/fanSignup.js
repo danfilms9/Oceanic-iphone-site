@@ -46,14 +46,10 @@ export async function submitFanSignup({ firstName, lastName, email, place = null
     })
   }
 
-  try {
-    await submitEmailEntry({
-      firstName,
-      lastName,
-      email,
-      ...(trimmedCity ? { city: trimmedCity } : {}),
-    })
-  } catch (notionErr) {
-    console.warn('[fanSignup] Firestore saved; Notion email entry failed:', notionErr)
-  }
+  await submitEmailEntry({
+    firstName,
+    lastName,
+    email,
+    ...(trimmedCity ? { city: trimmedCity } : {}),
+  })
 }

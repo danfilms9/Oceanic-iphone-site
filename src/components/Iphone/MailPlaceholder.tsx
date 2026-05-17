@@ -95,7 +95,7 @@ export function MailPlaceholder() {
                 disabled={isSubmitting}
               />
             </div>
-            <div className="iphone-settings-option iphone-settings-option-bottom-three iphone-mail-form-field">
+            <div className="iphone-settings-option iphone-settings-option-middle-three iphone-mail-form-field">
               <span className="iphone-mail-form-label">Email</span>
               <input
                 type="email"
@@ -107,22 +107,24 @@ export function MailPlaceholder() {
                 autoComplete="email"
               />
             </div>
-          </div>
-
-          <section className="iphone-mail-city-section" aria-label="City (optional)">
-            <h2 className="iphone-mail-city-heading">
-              City <span className="iphone-mail-city-optional">(optional)</span>
-            </h2>
-            <div className="iphone-mail-city-card">
-              <CityAutocomplete
-                key={cityAutocompleteKey}
-                className="iphone-mail-geocoder"
-                placeholder="Oceanville"
-                disabled={isSubmitting}
-                onSelect={(place) => setSelectedPlace(place)}
-              />
+            <div
+              className="iphone-settings-option iphone-settings-option-bottom-three iphone-mail-form-field"
+              aria-label="City (optional)"
+            >
+              <span className="iphone-mail-form-label">
+                City <span className="iphone-mail-city-optional">(optional)</span>
+              </span>
+              <div className="iphone-mail-form-city-input">
+                <CityAutocomplete
+                  key={cityAutocompleteKey}
+                  className="iphone-mail-geocoder"
+                  placeholder="Oceanville"
+                  disabled={isSubmitting}
+                  onSelect={(place) => setSelectedPlace(place)}
+                />
+              </div>
             </div>
-          </section>
+          </div>
 
           <button
             type="submit"
