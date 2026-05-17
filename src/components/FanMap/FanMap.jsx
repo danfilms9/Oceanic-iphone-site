@@ -10,8 +10,6 @@ import './FanMap.css'
 const STORAGE_KEY = 'slide_pin_count'
 const LEGACY_STORAGE_KEY = 'slide_pin_dropped'
 const MAX_PINS_PER_BROWSER = 3
-const THANKS_VISIBLE_MS = 5000
-const THANKS_FADE_MS = 600
 
 const MAPS_TITLE = 'Tell us where to tour!'
 const MAPS_SUBHEADING = 'Drop a pin where we should play our music songs next.'
@@ -45,7 +43,6 @@ export function FanMap({ layout = 'default' }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [pendingPin, setPendingPin] = useState(null)
   const [thanksMessage, setThanksMessage] = useState(null)
-  const [thanksFading, setThanksFading] = useState(false)
   const [pinDropCount, setPinDropCount] = useState(readPinDropCount)
   const formDisabled = pinDropCount >= MAX_PINS_PER_BROWSER
 
@@ -53,23 +50,6 @@ export function FanMap({ layout = 'default' }) {
     const unsub = subscribeToPins(setPins)
     return () => unsub()
   }, [])
-
-  useEffect(() => {
-    if (!thanksMessage) {
-      setThanksFading(false)
-      return
-    }
-    setThanksFading(false)
-    const fadeTimer = setTimeout(() => setThanksFading(true), THANKS_VISIBLE_MS)
-    const clearTimer = setTimeout(() => {
-      setThanksMessage(null)
-      setThanksFading(false)
-    }, THANKS_VISIBLE_MS + THANKS_FADE_MS)
-    return () => {
-      clearTimeout(fadeTimer)
-      clearTimeout(clearTimer)
-    }
-  }, [thanksMessage])
 
   const handleDropPin = (place) => {
     setPendingPin(place)
@@ -125,10 +105,7 @@ export function FanMap({ layout = 'default' }) {
                 <div className="fanmap-ios-settings-group" role="group">
                   <div className="fanmap-ios-settings-row fanmap-ios-settings-row--content">
                     {thanksMessage ? (
-                      <p
-                        className={`fanmap-music-lead${thanksFading ? ' fanmap-music-lead--fading' : ''}`}
-                        role="status"
-                      >
+                      <p className="fanmap-music-lead" role="status">
                         {thanksMessage}
                       </p>
                     ) : (
@@ -151,10 +128,7 @@ export function FanMap({ layout = 'default' }) {
           <div className="fanmap-header">
             <h1 className="fanmap-title">Maps</h1>
             {thanksMessage ? (
-              <p
-                className={`fanmap-lead${thanksFading ? ' fanmap-lead--fading' : ''}`}
-                role="status"
-              >
+              <p className="fanmap-lead" role="status">
                 {thanksMessage}
               </p>
             ) : (
