@@ -51,6 +51,18 @@ export function isNorthAmericaTourShirt(product: Pick<MerchProduct, 'name'>): bo
   return TOUR_SHIRT_NAME_PATTERN.test(product.name);
 }
 
+const HIDDEN_MERCH_NAME_PATTERNS = [
+  /short\s*sleeve\s*upcycle/i,
+  /long\s*sleeve\s*upcycle/i,
+  /bracelet/i,
+  TOUR_SHIRT_NAME_PATTERN,
+] as const;
+
+/** Products excluded from merch list/grid (still exist in Shopify). */
+export function isHiddenMerchProduct(product: Pick<MerchProduct, 'name'>): boolean {
+  return HIDDEN_MERCH_NAME_PATTERNS.some((pattern) => pattern.test(product.name));
+}
+
 /** Get the value for an option (e.g. "Size") from a variant's selectedOptions */
 export function getVariantOptionValue(variant: MerchProductVariant, optionName: string): string | null {
   const opt = variant.selectedOptions?.find((o) => o.name === optionName);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchShopifyProducts } from '../services/shopifyService';
-import { isNorthAmericaTourShirt, type MerchProduct } from '../types/merch';
+import { isHiddenMerchProduct, type MerchProduct } from '../types/merch';
 
 /**
  * Returns merch products from Shopify. Empty when not connected or on error.
@@ -16,13 +16,8 @@ export function useMerchProducts() {
         setLoading(true);
         setError(null);
         const fetched = await fetchShopifyProducts();
-        const prioritized = [...fetched].sort((a, b) => {
-          const aIsTourShirt = isNorthAmericaTourShirt(a);
-          const bIsTourShirt = isNorthAmericaTourShirt(b);
-          if (aIsTourShirt === bIsTourShirt) return 0;
-          return aIsTourShirt ? -1 : 1;
-        });
-        setProducts(prioritized);
+        const visible = fetched.filter((p) => !isHiddenMerchProduct(p));
+        setProducts(visible);
         setError(fetched.length === 0 ? "Items didn't load. Please refresh." : null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load products');
