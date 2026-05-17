@@ -121,7 +121,7 @@ export function FanMap({ layout = 'default' }) {
               <div className="fanmap-ios-settings-options-align">
                 <div className="fanmap-ios-settings-group" role="group">
                   <div className="fanmap-ios-settings-row fanmap-ios-settings-row--content">
-                    <p className="fanmap-music-lead">Where should we play our music songs next?</p>
+                    <p className="fanmap-music-lead">Drop a pin in your city to let us know where we should play our music songs next.</p>
                     <PinForm disabled={formDisabled} onDropPin={handleDropPin} />
                   </div>
                 </div>
@@ -141,7 +141,7 @@ export function FanMap({ layout = 'default' }) {
         <>
           <div className="fanmap-header">
             <h1 className="fanmap-title">Maps</h1>
-            <p className="fanmap-lead">Where should we play our music songs next?</p>
+            <p className="fanmap-lead">Drop a pin in your city to let us know where we should play our music songs next.</p>
           </div>
 
           <div className="fanmap-layout">
