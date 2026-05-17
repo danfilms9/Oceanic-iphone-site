@@ -13,8 +13,8 @@ const MAX_PINS_PER_BROWSER = 3
 const THANKS_VISIBLE_MS = 5000
 const THANKS_FADE_MS = 600
 
-const MAPS_HEADING =
-  'Drop a pin in your city to let us know where we should play our music songs next.'
+const MAPS_TITLE = 'Tell us where to tour!'
+const MAPS_SUBHEADING = 'Drop a pin where we should play our music songs next.'
 
 function readPinDropCount() {
   try {
@@ -124,12 +124,19 @@ export function FanMap({ layout = 'default' }) {
               <div className="fanmap-ios-settings-options-align">
                 <div className="fanmap-ios-settings-group" role="group">
                   <div className="fanmap-ios-settings-row fanmap-ios-settings-row--content">
-                    <p
-                      className={`fanmap-music-lead${thanksFading ? ' fanmap-music-lead--fading' : ''}`}
-                      role={thanksMessage ? 'status' : undefined}
-                    >
-                      {thanksMessage ?? MAPS_HEADING}
-                    </p>
+                    {thanksMessage ? (
+                      <p
+                        className={`fanmap-music-lead${thanksFading ? ' fanmap-music-lead--fading' : ''}`}
+                        role="status"
+                      >
+                        {thanksMessage}
+                      </p>
+                    ) : (
+                      <div className="fanmap-music-copy">
+                        <h2 className="fanmap-music-title">{MAPS_TITLE}</h2>
+                        <p className="fanmap-music-sublead">{MAPS_SUBHEADING}</p>
+                      </div>
+                    )}
                     {!thanksMessage && (
                       <PinForm disabled={formDisabled} onDropPin={handleDropPin} />
                     )}
@@ -143,12 +150,19 @@ export function FanMap({ layout = 'default' }) {
         <>
           <div className="fanmap-header">
             <h1 className="fanmap-title">Maps</h1>
-            <p
-              className={`fanmap-lead${thanksFading ? ' fanmap-lead--fading' : ''}`}
-              role={thanksMessage ? 'status' : undefined}
-            >
-              {thanksMessage ?? MAPS_HEADING}
-            </p>
+            {thanksMessage ? (
+              <p
+                className={`fanmap-lead${thanksFading ? ' fanmap-lead--fading' : ''}`}
+                role="status"
+              >
+                {thanksMessage}
+              </p>
+            ) : (
+              <>
+                <h2 className="fanmap-prompt-title">{MAPS_TITLE}</h2>
+                <p className="fanmap-lead">{MAPS_SUBHEADING}</p>
+              </>
+            )}
           </div>
 
           <div className="fanmap-layout">
