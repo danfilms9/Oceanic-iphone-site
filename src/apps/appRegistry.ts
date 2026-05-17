@@ -41,7 +41,7 @@ export function getApp(id: string): AppDef | undefined {
 }
 
 /** App ids that appear in the dock, in order. */
-export const DOCK_APP_IDS = ['calendar', 'merch'] as const;
+export const DOCK_APP_IDS = ['maps', 'merch'] as const;
 
 export function getDockApps(): AppDef[] {
   return DOCK_APP_IDS.map((id) => getApp(id)).filter((a): a is AppDef => a != null);

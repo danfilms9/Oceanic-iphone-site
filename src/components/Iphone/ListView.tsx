@@ -119,12 +119,10 @@ export function ListView() {
           );
         })}
         
-        {/* Blank rows if no events */}
         {futureEvents.length === 0 && (
-          Array.from({ length: 6 }).map((_, index) => (
-            <div key={`blank-${index}`} className="iphone-calendar-event-row iphone-calendar-event-row-blank">
-            </div>
-          ))
+          <div className="iphone-calendar-events-empty">
+            New Tour Dates Coming Soon
+          </div>
         )}
       </div>
     </div>
