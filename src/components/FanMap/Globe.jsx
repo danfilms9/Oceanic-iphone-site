@@ -23,6 +23,7 @@ import {
   setFanmapPinBaseScale,
   updateFanmapPinScalesInScene,
 } from './pinObject.js'
+import { applyOceanSphereScale } from './globeOceanScale.js'
 
 /** Gap between pin head and tooltip (px at zoom multiplier 1). */
 const TOOLTIP_OFFSET_PX = 14
@@ -289,6 +290,13 @@ export const Globe = forwardRef(function Globe({ pins, theme = 'dark' }, ref) {
               c.removeEventListener('change', syncPinScalesFromCamera)
             }
             syncPinScalesFromCamera()
+
+            let oceanScaleAttempts = 0
+            const ensureOceanScale = () => {
+              if (applyOceanSphereScale(inst)) return
+              if (oceanScaleAttempts++ < 40) requestAnimationFrame(ensureOceanScale)
+            }
+            ensureOceanScale()
 
             pinPointerCleanupRef.current?.()
             pinPointerCleanupRef.current = attachPinPointerHover(

@@ -98,7 +98,7 @@ export function FanMap({ layout = 'default' }) {
     }
 
     setPinDropCount(nextCount)
-    setThanksMessage(`Thanks, ${firstName}! You're on the map.`)
+    setThanksMessage(`Thanks ${firstName}, well be sure to let you know when we're headed that way :)`)
     setModalOpen(false)
     setPendingPin(null)
 
@@ -121,7 +121,7 @@ export function FanMap({ layout = 'default' }) {
               <div className="fanmap-ios-settings-options-align">
                 <div className="fanmap-ios-settings-group" role="group">
                   <div className="fanmap-ios-settings-row fanmap-ios-settings-row--content">
-                    <p className="fanmap-music-lead">Where should we come to next?</p>
+                    <p className="fanmap-music-lead">Where should we play our music songs next?</p>
                     <PinForm disabled={formDisabled} onDropPin={handleDropPin} />
                   </div>
                 </div>
@@ -141,7 +141,7 @@ export function FanMap({ layout = 'default' }) {
         <>
           <div className="fanmap-header">
             <h1 className="fanmap-title">Maps</h1>
-            <p className="fanmap-lead">Where should we come to next?</p>
+            <p className="fanmap-lead">Where should we play our music songs next?</p>
           </div>
 
           <div className="fanmap-layout">
