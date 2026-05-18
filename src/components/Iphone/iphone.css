@@ -6094,6 +6094,10 @@ a.iphone-settings-option {
 .iphone-mail-city-optional {
   font-weight: 400;
   color: #666666;
+  font-size: 0.55em;
+  display: inline-block;
+  margin-left: 0.35em;
+  vertical-align: middle;
 }
 
 .iphone-mail-submit-button {
