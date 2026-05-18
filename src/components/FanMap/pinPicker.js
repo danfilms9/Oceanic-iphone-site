@@ -5,6 +5,9 @@ import { findPinRootFromObject, setPinHoverTarget } from './pinHover.js'
 
 /** @typedef {{ city: string, x: number, y: number } | null} FanmapPinTooltip */
 
+/** Pin label stays up this long after hover/click before fading out. */
+const PIN_LABEL_VISIBLE_MS = 2000
+
 /**
  * @param {import('globe.gl').GlobeInstance} globeInstance
  * @param {{ stackCenterLat: number, stackCenterLng: number, displayLat: number, displayLng: number, stackSize: number }} pinData
@@ -35,7 +38,8 @@ function buildPinTooltip(root, globeInstance) {
 }
 
 /**
- * Raycast pin hover on the globe canvas (globe.gl object hover is unreliable with overlays).
+ * Raycast pin hover/click on the globe canvas (globe.gl object hover is unreliable with overlays).
+ * The active pin label fades out after 2s unless another pin is hovered or clicked (timer resets).
  * @param {import('globe.gl').GlobeInstance} globeInstance
  * @param {(tooltip: FanmapPinTooltip) => void} [onTooltipChange]
  * @returns {() => void} cleanup
@@ -47,10 +51,32 @@ export function attachPinPointerHover(globeInstance, onTooltipChange) {
   const raycaster = new Raycaster()
   const mouse = new Vector2()
   /** @type {import('three').Object3D | null} */
-  let hoveredRoot = null
+  let activeRoot = null
+  let hideTimer = 0
+
+  const clearHideTimer = () => {
+    if (hideTimer) {
+      clearTimeout(hideTimer)
+      hideTimer = 0
+    }
+  }
+
+  const clearActivePin = () => {
+    if (activeRoot) setPinHoverTarget(activeRoot, false)
+    activeRoot = null
+    onTooltipChange?.(null)
+  }
+
+  const scheduleHide = () => {
+    clearHideTimer()
+    hideTimer = window.setTimeout(() => {
+      hideTimer = 0
+      clearActivePin()
+    }, PIN_LABEL_VISIBLE_MS)
+  }
 
   const notifyTooltip = () => {
-    onTooltipChange?.(buildPinTooltip(hoveredRoot, globeInstance))
+    onTooltipChange?.(buildPinTooltip(activeRoot, globeInstance))
   }
 
   const collectPinRoots = () => {
@@ -78,44 +104,56 @@ export function attachPinPointerHover(globeInstance, onTooltipChange) {
     return findPinRootFromObject(hits[0].object)
   }
 
-  const setHovered = (nextRoot) => {
-    if (nextRoot === hoveredRoot) {
+  const setActivePin = (nextRoot) => {
+    if (!nextRoot) return
+
+    if (nextRoot === activeRoot) {
       notifyTooltip()
+      scheduleHide()
       return
     }
 
-    if (hoveredRoot) setPinHoverTarget(hoveredRoot, false)
-    hoveredRoot = nextRoot
-    if (hoveredRoot) setPinHoverTarget(hoveredRoot, true)
-
-    canvas.style.cursor = hoveredRoot ? 'pointer' : ''
+    if (activeRoot) setPinHoverTarget(activeRoot, false)
+    activeRoot = nextRoot
+    setPinHoverTarget(activeRoot, true)
     notifyTooltip()
+    scheduleHide()
   }
 
   const onPointerMove = (event) => {
-    setHovered(pickPinRoot(event.clientX, event.clientY))
+    const root = pickPinRoot(event.clientX, event.clientY)
+    canvas.style.cursor = root ? 'pointer' : ''
+    if (root) setActivePin(root)
+  }
+
+  const onClick = (event) => {
+    const root = pickPinRoot(event.clientX, event.clientY)
+    if (root) setActivePin(root)
   }
 
   const onPointerLeave = () => {
-    setHovered(null)
+    canvas.style.cursor = ''
   }
 
   const controls = globeInstance.controls?.()
   const onControlsChange = () => {
-    if (hoveredRoot) notifyTooltip()
+    if (activeRoot) notifyTooltip()
   }
   controls?.addEventListener('change', onControlsChange)
 
   canvas.addEventListener('pointermove', onPointerMove)
+  canvas.addEventListener('click', onClick)
   canvas.addEventListener('pointerleave', onPointerLeave)
 
   return () => {
     canvas.removeEventListener('pointermove', onPointerMove)
+    canvas.removeEventListener('click', onClick)
     canvas.removeEventListener('pointerleave', onPointerLeave)
     controls?.removeEventListener('change', onControlsChange)
+    clearHideTimer()
     canvas.style.cursor = ''
-    if (hoveredRoot) setPinHoverTarget(hoveredRoot, false)
-    hoveredRoot = null
+    if (activeRoot) setPinHoverTarget(activeRoot, false)
+    activeRoot = null
     onTooltipChange?.(null)
   }
 }

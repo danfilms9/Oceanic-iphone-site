@@ -238,7 +238,7 @@ app.post('/api/notion/email-entries', async (req, res) => {
       return res.status(500).json({ error: 'NOTION_EMAIL_DATABASE_ID not configured' });
     }
 
-    const { firstName, lastName, email, city } = req.body;
+    const { firstName, lastName, email, city, phone } = req.body;
 
     if (!firstName || !lastName || !email) {
       return res.status(400).json({ 
@@ -254,49 +254,55 @@ app.post('/api/notion/email-entries', async (req, res) => {
       databaseId = `${databaseId.slice(0, 8)}-${databaseId.slice(8, 12)}-${databaseId.slice(12, 16)}-${databaseId.slice(16, 20)}-${databaseId.slice(20)}`;
     }
 
-    const response = await notion.pages.create({
-      parent: {
-        database_id: databaseId,
+    const cityValue = city && String(city).trim() ? String(city).trim() : '';
+    const phoneValue = phone && String(phone).trim() ? String(phone).trim() : '';
+
+    const baseProperties = {
+      'First Name': {
+        rich_text: [{ text: { content: firstName } }],
       },
-      properties: {
-        'First Name': {
-          rich_text: [
-            {
-              text: {
-                content: firstName,
-              },
-            },
-          ],
-        },
-        'Last Name': {
-          title: [
-            {
-              text: {
-                content: lastName,
-              },
-            },
-          ],
-        },
-        'Email': {
-          rich_text: [
-            {
-              text: {
-                content: email,
-              },
-            },
-          ],
-        },
-        ...(city && String(city).trim()
-          ? {
-              City: {
-                select: {
-                  name: String(city).trim(),
-                },
-              },
-            }
-          : {}),
+      'Last Name': {
+        title: [{ text: { content: lastName } }],
       },
-    });
+      Email: {
+        rich_text: [{ text: { content: email } }],
+      },
+      ...(cityValue
+        ? {
+            City: {
+              rich_text: [{ text: { content: cityValue.slice(0, 2000) } }],
+            },
+          }
+        : {}),
+      ...(phoneValue
+        ? {
+            Phone: {
+              rich_text: [{ text: { content: phoneValue.slice(0, 2000) } }],
+            },
+          }
+        : {}),
+    };
+
+    const selectCityProperties = {
+      ...baseProperties,
+      ...(cityValue
+        ? { City: { select: { name: cityValue.slice(0, 100) } } }
+        : {}),
+    };
+
+    let response;
+    try {
+      response = await notion.pages.create({
+        parent: { database_id: databaseId },
+        properties: baseProperties,
+      });
+    } catch (firstError) {
+      if (firstError?.code !== 'validation_error' || !cityValue) throw firstError;
+      response = await notion.pages.create({
+        parent: { database_id: databaseId },
+        properties: selectCityProperties,
+      });
+    }
 
     res.json({ success: true, id: response.id });
   } catch (error) {

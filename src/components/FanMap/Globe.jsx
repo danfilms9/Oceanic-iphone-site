@@ -42,6 +42,10 @@ const INITIAL_POINT_OF_VIEW = Object.freeze({ lng: -50 })
 const ZOOM_MIN_DISTANCE_GLOBE_R = 1.11
 const ZOOM_MAX_DISTANCE_GLOBE_R = 6
 
+const AUTO_ROTATE_SPEED = 0.4
+/** Resume auto-rotate this long after the user stops dragging or zooming. */
+const AUTO_ROTATE_RESUME_MS = 3000
+
 /** Without a texture, three-globe defaults to black for the sphere — we set ocean color here. */
 const GLOBE_BASE_MATERIAL = {
   light: new MeshPhongMaterial({
@@ -280,13 +284,36 @@ export const Globe = forwardRef(function Globe({ pins, theme = 'dark' }, ref) {
             c.minDistance = globeR * ZOOM_MIN_DISTANCE_GLOBE_R
             c.maxDistance = globeR * ZOOM_MAX_DISTANCE_GLOBE_R
             c.autoRotate = true
-            c.autoRotateSpeed = 0.4
+            c.autoRotateSpeed = AUTO_ROTATE_SPEED
+            let autoRotateResumeTimer = 0
+
+            const clearAutoRotateResumeTimer = () => {
+              if (autoRotateResumeTimer) {
+                clearTimeout(autoRotateResumeTimer)
+                autoRotateResumeTimer = 0
+              }
+            }
+
             const pauseRotate = () => {
               c.autoRotate = false
+              clearAutoRotateResumeTimer()
             }
+
+            const scheduleResumeRotate = () => {
+              clearAutoRotateResumeTimer()
+              autoRotateResumeTimer = window.setTimeout(() => {
+                autoRotateResumeTimer = 0
+                c.autoRotate = true
+              }, AUTO_ROTATE_RESUME_MS)
+            }
+
             c.addEventListener('start', pauseRotate)
+            c.addEventListener('end', scheduleResumeRotate)
             c.addEventListener('change', syncPinScalesFromCamera)
             controlsCleanupRef.current = () => {
+              clearAutoRotateResumeTimer()
+              c.removeEventListener('start', pauseRotate)
+              c.removeEventListener('end', scheduleResumeRotate)
               c.removeEventListener('change', syncPinScalesFromCamera)
             }
             syncPinScalesFromCamera()

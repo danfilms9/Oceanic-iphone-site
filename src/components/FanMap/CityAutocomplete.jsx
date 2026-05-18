@@ -3,7 +3,7 @@ import { GeocoderAutocomplete } from '@geoapify/geocoder-autocomplete'
 import '@geoapify/geocoder-autocomplete/styles/minimal.css'
 import { getGeoapifyKey, logGeoapifyEnvDebug } from '../../lib/geoapifyEnv.js'
 
-/** @param {{ onSelect: (place: { city: string, country: string, lat: number, lng: number }) => void, disabled?: boolean, placeholder?: string, className?: string }} props */
+/** @param {{ onSelect: (place: { city: string, country: string, state?: string, stateCode?: string, countryCode?: string, formatted?: string, lat: number, lng: number }) => void, disabled?: boolean, placeholder?: string, className?: string }} props */
 export function CityAutocomplete({
   onSelect,
   disabled = false,
@@ -39,6 +39,20 @@ export function CityAutocomplete({
         typeof p.country === 'string'
           ? p.country.trim()
           : String(p.country ?? '').trim() || 'Unknown'
+      const state =
+        typeof p.state === 'string' ? p.state.trim() : String(p.state ?? '').trim()
+      const stateCode =
+        typeof p.state_code === 'string'
+          ? p.state_code.trim()
+          : String(p.state_code ?? '').trim()
+      const countryCode =
+        typeof p.country_code === 'string'
+          ? p.country_code.trim()
+          : String(p.country_code ?? '').trim()
+      const formatted =
+        typeof p.formatted === 'string'
+          ? p.formatted.trim()
+          : String(p.formatted ?? '').trim()
       const lat = typeof p.lat === 'number' ? p.lat : parseFloat(String(p.lat))
       const lonVal = p.lon ?? p.lng
       const lng =
@@ -47,6 +61,10 @@ export function CityAutocomplete({
         onSelectRef.current({
           city,
           country,
+          ...(state ? { state } : {}),
+          ...(stateCode ? { stateCode } : {}),
+          ...(countryCode ? { countryCode } : {}),
+          ...(formatted ? { formatted } : {}),
           lat,
           lng,
         })

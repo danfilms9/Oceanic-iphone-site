@@ -2,7 +2,7 @@ type NotionPageProperties = Record<string, unknown>
 
 /**
  * Notion "Email Entries" database property payloads (First Name, Last Name, Email, City, Phone).
- * Phone is a text property in Notion; included when provided.
+ * City is written as rich_text (full location string); falls back to select for legacy databases.
  */
 export function buildEmailEntryNotionProperties(
   firstName: string,
@@ -10,9 +10,19 @@ export function buildEmailEntryNotionProperties(
   email: string,
   city?: string,
   phone?: string,
-  options: { emailAsRichText?: boolean; includeCity?: boolean; includePhone?: boolean } = {},
+  options: {
+    emailAsRichText?: boolean
+    includeCity?: boolean
+    includePhone?: boolean
+    cityAsSelect?: boolean
+  } = {},
 ): NotionPageProperties {
-  const { emailAsRichText = true, includeCity = true, includePhone = true } = options
+  const {
+    emailAsRichText = true,
+    includeCity = true,
+    includePhone = true,
+    cityAsSelect = false,
+  } = options
   const properties: NotionPageProperties = {
     'First Name': {
       rich_text: [{ text: { content: firstName } }],
@@ -26,7 +36,9 @@ export function buildEmailEntryNotionProperties(
   }
   const cityName = city?.trim()
   if (includeCity && cityName) {
-    properties.City = { select: { name: cityName } }
+    properties.City = cityAsSelect
+      ? { select: { name: cityName.slice(0, 100) } }
+      : { rich_text: [{ text: { content: cityName.slice(0, 2000) } }] }
   }
   const phoneValue = phone?.trim()
   if (includePhone && phoneValue) {
@@ -60,6 +72,13 @@ export async function createEmailEntryPage(
     buildEmailEntryNotionProperties(firstName, lastName, email, city, phone),
     buildEmailEntryNotionProperties(firstName, lastName, email, city, phone, {
       emailAsRichText: false,
+    }),
+    buildEmailEntryNotionProperties(firstName, lastName, email, city, phone, {
+      cityAsSelect: true,
+    }),
+    buildEmailEntryNotionProperties(firstName, lastName, email, city, phone, {
+      emailAsRichText: false,
+      cityAsSelect: true,
     }),
     buildEmailEntryNotionProperties(firstName, lastName, email, city, phone, {
       includeCity: false,
