@@ -2,6 +2,10 @@ import { useEffect, useLayoutEffect, useRef } from 'react'
 import { GeocoderAutocomplete } from '@geoapify/geocoder-autocomplete'
 import '@geoapify/geocoder-autocomplete/styles/minimal.css'
 import { getGeoapifyKey, logGeoapifyEnvDebug } from '../../lib/geoapifyEnv.js'
+import {
+  fetchStateFromReverseGeocode,
+  placeFromGeoapifyProperties,
+} from '../../lib/formatLocation.js'
 
 /** @param {{ onSelect: (place: { city: string, country: string, state?: string, stateCode?: string, countryCode?: string, formatted?: string, lat: number, lng: number }) => void, disabled?: boolean, placeholder?: string, className?: string }} props */
 export function CityAutocomplete({
@@ -32,43 +36,29 @@ export function CityAutocomplete({
       placeholder,
     })
 
-    ac.on('select', (feature) => {
+    ac.on('select', async (feature) => {
       const p = feature.properties ?? {}
-      const city = (p.city || p.name || '').trim()
-      const country =
-        typeof p.country === 'string'
-          ? p.country.trim()
-          : String(p.country ?? '').trim() || 'Unknown'
-      const state =
-        typeof p.state === 'string' ? p.state.trim() : String(p.state ?? '').trim()
-      const stateCode =
-        typeof p.state_code === 'string'
-          ? p.state_code.trim()
-          : String(p.state_code ?? '').trim()
-      const countryCode =
-        typeof p.country_code === 'string'
-          ? p.country_code.trim()
-          : String(p.country_code ?? '').trim()
-      const formatted =
-        typeof p.formatted === 'string'
-          ? p.formatted.trim()
-          : String(p.formatted ?? '').trim()
       const lat = typeof p.lat === 'number' ? p.lat : parseFloat(String(p.lat))
       const lonVal = p.lon ?? p.lng
       const lng =
         typeof lonVal === 'number' ? lonVal : parseFloat(String(lonVal ?? ''))
-      if (Number.isFinite(lat) && Number.isFinite(lng) && city) {
-        onSelectRef.current({
-          city,
-          country,
-          ...(state ? { state } : {}),
-          ...(stateCode ? { stateCode } : {}),
-          ...(countryCode ? { countryCode } : {}),
-          ...(formatted ? { formatted } : {}),
-          lat,
-          lng,
-        })
+
+      let place = placeFromGeoapifyProperties(p, lat, lng)
+      if (!place) return
+
+      const needsState =
+        !place.stateCode &&
+        !place.state &&
+        (place.countryCode?.toUpperCase() === 'US' ||
+          place.country === 'United States' ||
+          place.country === 'United States of America')
+
+      if (needsState) {
+        const extra = await fetchStateFromReverseGeocode(GEO_KEY, lat, lng)
+        place = { ...place, ...extra }
       }
+
+      onSelectRef.current(place)
     })
 
     return () => {
@@ -97,6 +87,6 @@ export function CityAutocomplete({
       className={`${className} geoapify-geocoder-autocomplete-container`}
       ref={containerRef}
       style={{ position: 'relative' }}
-    />
+    ></div>
   )
 }
