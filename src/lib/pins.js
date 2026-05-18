@@ -35,12 +35,14 @@ const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
  * City/country live on the pin for the globe; duplicated on subscriber for admin/export.
  *
  * @param {{ city: string, country: string, lat: number, lng: number }} pinData
- * @param {{ firstName: string, lastName: string, email: string, city: string, country: string }} subscriberData
+ * @param {{ firstName: string, lastName: string, email: string, city: string, country: string, phone?: string | null }} subscriberData
  */
 export async function addPinWithSubscriber(pinData, subscriberData) {
   const email = String(subscriberData.email).trim().toLowerCase()
   const firstName = String(subscriberData.firstName).trim()
   const lastName = String(subscriberData.lastName).trim()
+  const phone =
+    typeof subscriberData.phone === 'string' ? subscriberData.phone.trim() : ''
   if (!firstName || !lastName || !EMAIL_REGEX.test(email)) {
     throw new Error('Invalid subscriber data')
   }
@@ -63,6 +65,7 @@ export async function addPinWithSubscriber(pinData, subscriberData) {
     city: subscriberData.city,
     country: subscriberData.country,
     createdAt: serverTimestamp(),
+    ...(phone ? { phone } : {}),
   })
 
   await batch.commit()
@@ -71,12 +74,14 @@ export async function addPinWithSubscriber(pinData, subscriberData) {
 /**
  * Mailing-list signup without a map pin (no city / coordinates).
  *
- * @param {{ firstName: string, lastName: string, email: string, city?: string, country?: string }} subscriberData
+ * @param {{ firstName: string, lastName: string, email: string, city?: string, country?: string, phone?: string | null }} subscriberData
  */
 export async function addSubscriberOnly(subscriberData) {
   const email = String(subscriberData.email).trim().toLowerCase()
   const firstName = String(subscriberData.firstName).trim()
   const lastName = String(subscriberData.lastName).trim()
+  const phone =
+    typeof subscriberData.phone === 'string' ? subscriberData.phone.trim() : ''
   if (!firstName || !lastName || !EMAIL_REGEX.test(email)) {
     throw new Error('Invalid subscriber data')
   }
@@ -90,6 +95,7 @@ export async function addSubscriberOnly(subscriberData) {
     city: String(subscriberData.city ?? '').trim(),
     country: String(subscriberData.country ?? '').trim(),
     createdAt: serverTimestamp(),
+    ...(phone ? { phone } : {}),
   })
   await batch.commit()
 }

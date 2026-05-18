@@ -7,6 +7,7 @@ export interface EmailEntry {
   lastName: string;
   email: string;
   city?: string;
+  phone?: string;
 }
 
 /**

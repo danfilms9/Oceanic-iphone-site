@@ -2,11 +2,12 @@ import { useState } from 'react'
 
 const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
-/** @param {{ open: boolean, onCancel: () => void, onSubmitPayload: (payload: { firstName: string, lastName: string, email: string }) => Promise<void> }} props */
+/** @param {{ open: boolean, onCancel: () => void, onSubmitPayload: (payload: { firstName: string, lastName: string, email: string, phone?: string }) => Promise<void> }} props */
 export function SubscriberModal({ open, onCancel, onSubmitPayload }) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -17,6 +18,7 @@ export function SubscriberModal({ open, onCancel, onSubmitPayload }) {
     const trimmedFirst = firstName.trim()
     const trimmedLast = lastName.trim()
     const trimmedEmail = email.trim().toLowerCase()
+    const trimmedPhone = phone.trim()
     if (!trimmedFirst) {
       setError('Please enter your first name.')
       return
@@ -35,6 +37,7 @@ export function SubscriberModal({ open, onCancel, onSubmitPayload }) {
         firstName: trimmedFirst,
         lastName: trimmedLast,
         email: trimmedEmail,
+        ...(trimmedPhone ? { phone: trimmedPhone } : {}),
       })
     } catch (err) {
       const message =
@@ -92,6 +95,20 @@ export function SubscriberModal({ open, onCancel, onSubmitPayload }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              disabled={submitting}
+            />
+          </label>
+          <label className="fanmap-modal__label">
+            <span className="fanmap-modal__label-text">
+              Phone <span className="fanmap-modal__label-optional">(optional)</span>
+            </span>
+            <input
+              type="tel"
+              className="fanmap-input"
+              maxLength={32}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              autoComplete="tel"
               disabled={submitting}
             />
           </label>

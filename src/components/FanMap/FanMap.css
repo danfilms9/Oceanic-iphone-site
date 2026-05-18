@@ -241,6 +241,11 @@
   color: #c4c4c4;
 }
 
+.fanmap-modal__label-optional {
+  font-weight: 400;
+  color: #8c8c8c;
+}
+
 .fanmap-input {
   padding: 0.7rem 0.85rem;
   border-radius: 8px;

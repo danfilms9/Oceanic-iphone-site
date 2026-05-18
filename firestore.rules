@@ -19,7 +19,7 @@ service cloud.firestore {
 
     match /subscribers/{subId} {
       allow read: if false;
-      allow create: if request.resource.data.keys().hasOnly(['firstName','lastName','email','city','country','createdAt'])
+      allow create: if request.resource.data.keys().hasOnly(['firstName','lastName','email','city','country','phone','createdAt'])
         && request.resource.data.firstName is string
         && request.resource.data.firstName.size() > 0
         && request.resource.data.firstName.size() < 100
@@ -30,7 +30,9 @@ service cloud.firestore {
         && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
         && request.resource.data.email.size() < 254
         && request.resource.data.city is string
-        && request.resource.data.country is string;
+        && request.resource.data.country is string
+        && (!('phone' in request.resource.data)
+          || (request.resource.data.phone is string && request.resource.data.phone.size() < 64));
       allow update, delete: if false;
     }
   }

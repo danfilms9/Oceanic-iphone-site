@@ -15,6 +15,7 @@ export function MailPlaceholder() {
     lng: number;
   } | null>(null);
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -34,10 +35,12 @@ export function MailPlaceholder() {
     setErrorMessage('');
 
     try {
+      const trimmedPhone = phone.trim();
       await submitFanSignup({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
+        phone: trimmedPhone || null,
         place: selectedPlace,
       });
       setSubmitStatus('success');
@@ -46,6 +49,7 @@ export function MailPlaceholder() {
       setSelectedPlace(null);
       setCityAutocompleteKey((k) => k + 1);
       setEmail('');
+      setPhone('');
       setTimeout(() => {
         setSubmitStatus('idle');
         setErrorMessage('');
@@ -105,6 +109,24 @@ export function MailPlaceholder() {
                 placeholder="japples@gmail.com"
                 disabled={isSubmitting}
                 autoComplete="email"
+              />
+            </div>
+            <div
+              className="iphone-settings-option iphone-settings-option-middle-three iphone-mail-form-field"
+              aria-label="Phone (optional)"
+            >
+              <span className="iphone-mail-form-label">
+                Phone <span className="iphone-mail-city-optional">(optional)</span>
+              </span>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="iphone-mail-form-input"
+                placeholder="(555) 123-4567"
+                disabled={isSubmitting}
+                autoComplete="tel"
+                maxLength={32}
               />
             </div>
             <div

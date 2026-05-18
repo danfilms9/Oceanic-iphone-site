@@ -30,7 +30,7 @@ export default async function handler(
       });
     }
 
-    const { firstName, lastName, email, city } = req.body ?? {};
+    const { firstName, lastName, email, city, phone } = req.body ?? {};
 
     if (!firstName || !lastName || !email) {
       return res.status(400).json({
@@ -50,6 +50,7 @@ export default async function handler(
       String(lastName).trim(),
       String(email).trim(),
       city ? String(city).trim() : undefined,
+      phone ? String(phone).trim() : undefined,
     );
 
     res.setHeader('Access-Control-Allow-Origin', '*');

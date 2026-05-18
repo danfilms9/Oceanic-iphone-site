@@ -61,7 +61,7 @@ export function FanMap({ layout = 'default' }) {
     setPendingPin(null)
   }
 
-  const handleSubscriberSubmit = async ({ firstName, lastName, email }) => {
+  const handleSubscriberSubmit = async ({ firstName, lastName, email, phone }) => {
     if (!pendingPin) throw new Error('Missing place')
 
     const { city, country, lat, lng } = pendingPin
@@ -70,6 +70,7 @@ export function FanMap({ layout = 'default' }) {
       firstName,
       lastName,
       email,
+      phone: phone ?? null,
       place: { city, country, lat, lng },
     })
 
