@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { CityAutocomplete } from './CityAutocomplete.jsx'
 
-/** @param {{ disabled: boolean, onDropPin: (place: { city: string, country: string, lat: number, lng: number }) => void }} props */
+/** @param {{ disabled: boolean, onDropPin: (place: { city: string, country: string, lat: number, lng: number, state?: string, stateCode?: string, countryCode?: string, formatted?: string, locationLabel?: string }) => void }} props */
 export function PinForm({ disabled, onDropPin }) {
   const [selected, setSelected] = useState(null)
 

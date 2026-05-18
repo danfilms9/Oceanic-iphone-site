@@ -4,6 +4,7 @@ import '@geoapify/geocoder-autocomplete/styles/minimal.css'
 import { getGeoapifyKey, logGeoapifyEnvDebug } from '../../lib/geoapifyEnv.js'
 import {
   fetchStateFromReverseGeocode,
+  formatLocationLabel,
   placeFromGeoapifyProperties,
 } from '../../lib/formatLocation.js'
 
@@ -56,6 +57,16 @@ export function CityAutocomplete({
       if (needsState) {
         const extra = await fetchStateFromReverseGeocode(GEO_KEY, lat, lng)
         place = { ...place, ...extra }
+      }
+
+      const displayValue = typeof ac.getValue === 'function' ? ac.getValue().trim() : ''
+      if (displayValue && !place.formatted) {
+        place = { ...place, formatted: displayValue }
+      }
+
+      const locationLabel = formatLocationLabel(place)
+      if (locationLabel) {
+        place = { ...place, locationLabel }
       }
 
       onSelectRef.current(place)

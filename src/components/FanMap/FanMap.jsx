@@ -64,14 +64,14 @@ export function FanMap({ layout = 'default' }) {
   const handleSubscriberSubmit = async ({ firstName, lastName, email, phone }) => {
     if (!pendingPin) throw new Error('Missing place')
 
-    const { city, country, lat, lng } = pendingPin
+    const { lat, lng } = pendingPin
 
     await submitFanSignup({
       firstName,
       lastName,
       email,
       phone: phone ?? null,
-      place: { city, country, lat, lng },
+      place: pendingPin,
     })
 
     const nextCount = Math.min(pinDropCount + 1, MAX_PINS_PER_BROWSER)

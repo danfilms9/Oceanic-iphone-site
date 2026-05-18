@@ -6,6 +6,9 @@
  *   country?: string,
  *   countryCode?: string,
  *   formatted?: string,
+ *   locationLabel?: string,
+ *   lat?: number,
+ *   lng?: number,
  * }} LocationParts
  */
 
@@ -41,10 +44,11 @@ function isUnitedStates(countryCode, country) {
  */
 function parseUsStateCodeFromAddressLine(line) {
   if (!line) return ''
-  const segmentMatch = line.match(/,\s*([A-Z]{2})(?:\s+\d{5}|\s*,|\s*$)/)
-  if (segmentMatch) return segmentMatch[1]
-  const tokenMatch = line.match(/\b([A-Z]{2})\b/)
-  return tokenMatch?.[1] && tokenMatch[1].length === 2 ? tokenMatch[1] : ''
+  const betweenCommas = line.match(/,\s*([A-Z]{2})\s*,/i)
+  if (betweenCommas) return betweenCommas[1].toUpperCase()
+  const segmentMatch = line.match(/,\s*([A-Z]{2})(?:\s+\d{5}|\s*,|\s*$)/i)
+  if (segmentMatch) return segmentMatch[1].toUpperCase()
+  return ''
 }
 
 /**
@@ -88,7 +92,12 @@ export function readStateFromGeoapifyProperties(p) {
       typeof p.address_line1 === 'string'
         ? p.address_line1
         : String(p.address_line1 ?? '')
+    const formatted =
+      typeof p.formatted === 'string'
+        ? p.formatted
+        : String(p.formatted ?? '')
     stateCode =
+      parseUsStateCodeFromAddressLine(formatted) ||
       parseUsStateCodeFromAddressLine(line2) ||
       parseUsStateCodeFromAddressLine(line1)
   }
@@ -162,8 +171,48 @@ export async function fetchStateFromReverseGeocode(apiKey, lat, lng) {
 }
 
 /**
+ * Resolves the Notion/Mailchimp location string, enriching with reverse geocode if needed.
+ * @param {LocationParts | null | undefined} place
+ * @returns {Promise<string>}
+ */
+export async function resolveNotionLocationLabel(place) {
+  if (!place) return ''
+
+  const preset = place.locationLabel?.trim()
+  if (preset) return preset.length > NOTION_LOCATION_MAX ? preset.slice(0, NOTION_LOCATION_MAX) : preset
+
+  let enriched = place
+  const city = place.city?.trim()
+  const hasRegion = Boolean(place.stateCode?.trim() || place.state?.trim())
+  const formatted = place.formatted?.trim()
+  const parsedFromFormatted =
+    !hasRegion && formatted
+      ? parseUsStateCodeFromAddressLine(formatted)
+      : ''
+
+  if (!hasRegion && !parsedFromFormatted && city && Number.isFinite(place.lat) && Number.isFinite(place.lng)) {
+    const { getGeoapifyKey } = await import('./geoapifyEnv.js')
+    const apiKey = getGeoapifyKey()
+    if (
+      apiKey &&
+      isUnitedStates(place.countryCode, place.country?.trim())
+    ) {
+      const extra = await fetchStateFromReverseGeocode(
+        apiKey,
+        place.lat,
+        place.lng,
+      )
+      if (extra.state || extra.stateCode) {
+        enriched = { ...place, ...extra }
+      }
+    }
+  }
+
+  return formatLocationLabel(enriched)
+}
+
+/**
  * Human-readable location for Notion / Mailchimp (e.g. "Saint Petersburg, FL, United States").
- * Builds from structured fields so state is not dropped when `formatted` omits it.
  * @param {LocationParts | null | undefined} place
  * @returns {string}
  */
@@ -174,7 +223,11 @@ export function formatLocationLabel(place) {
   const stateCode = place.stateCode?.trim()
   const state = place.state?.trim()
   const country = place.country?.trim()
-  const region = stateCode || state
+  const formatted = place.formatted?.trim()
+  let region = stateCode || state
+  if (!region && formatted) {
+    region = parseUsStateCodeFromAddressLine(formatted)
+  }
   const isUS = isUnitedStates(place.countryCode, country)
 
   if (city) {
@@ -192,6 +245,5 @@ export function formatLocationLabel(place) {
     return truncate(city)
   }
 
-  const formatted = place.formatted?.trim()
   return formatted ? truncate(formatted) : ''
 }

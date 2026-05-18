@@ -1,5 +1,5 @@
 import { addPinWithSubscriber, addSubscriberOnly } from './pins.js'
-import { formatLocationLabel } from './formatLocation.js'
+import { resolveNotionLocationLabel } from './formatLocation.js'
 import { submitEmailEntry } from '../services/emailService'
 
 /**
@@ -12,6 +12,7 @@ import { submitEmailEntry } from '../services/emailService'
  *   stateCode?: string,
  *   countryCode?: string,
  *   formatted?: string,
+ *   locationLabel?: string,
  * }} FanPlace
  */
 
@@ -25,7 +26,7 @@ import { submitEmailEntry } from '../services/emailService'
 export async function submitFanSignup({ firstName, lastName, email, phone = null, place = null }) {
   const trimmedCity = place?.city?.trim() ?? ''
   const trimmedCountry = place?.country?.trim() ?? ''
-  const notionLocation = formatLocationLabel(place) || trimmedCity
+  const notionLocation = (await resolveNotionLocationLabel(place)) || trimmedCity
   const trimmedPhone = typeof phone === 'string' ? phone.trim() : ''
   const hasCoords =
     place != null &&
