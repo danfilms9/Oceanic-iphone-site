@@ -22,6 +22,7 @@ import { submitEmailEntry } from '../services/emailService'
  * Phone is optional and currently sent to Notion only (Firestore rules don't accept extra keys).
  *
  * @param {{ firstName: string, lastName: string, email: string, phone?: string | null, place?: FanPlace | null }} payload
+ * @returns {Promise<{ pinId: string | null }>}
  */
 export async function submitFanSignup({ firstName, lastName, email, phone = null, place = null }) {
   const trimmedCity = place?.city?.trim() ?? ''
@@ -34,8 +35,11 @@ export async function submitFanSignup({ firstName, lastName, email, phone = null
     Number.isFinite(place.lng) &&
     trimmedCity
 
+  /** @type {string | null} */
+  let pinId = null
+
   if (hasCoords) {
-    await addPinWithSubscriber(
+    const result = await addPinWithSubscriber(
       {
         city: trimmedCity,
         country: trimmedCountry || 'Unknown',
@@ -51,6 +55,7 @@ export async function submitFanSignup({ firstName, lastName, email, phone = null
         phone: trimmedPhone,
       },
     )
+    pinId = result.pinId
   } else {
     await addSubscriberOnly({
       firstName,
@@ -69,4 +74,6 @@ export async function submitFanSignup({ firstName, lastName, email, phone = null
     ...(notionLocation ? { city: notionLocation } : {}),
     ...(trimmedPhone ? { phone: trimmedPhone } : {}),
   })
+
+  return { pinId }
 }

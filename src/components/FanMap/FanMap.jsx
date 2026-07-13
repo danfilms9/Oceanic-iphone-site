@@ -39,7 +39,12 @@ function writePinDropCount(count) {
 export function FanMap({ layout = 'default' }) {
   const globeRef = useRef(null)
   const [pins, setPins] = useState([])
-  const displayPins = useMemo(() => spreadPinsForDisplay(pins), [pins])
+  /** Pin ids from this session — always shown even when a city is over the display cap. */
+  const [preferPinIds, setPreferPinIds] = useState(/** @type {string[]} */ ([]))
+  const displayPins = useMemo(
+    () => spreadPinsForDisplay(pins, { preferPinIds }),
+    [pins, preferPinIds],
+  )
   const [modalOpen, setModalOpen] = useState(false)
   const [pendingPin, setPendingPin] = useState(null)
   const [thanksMessage, setThanksMessage] = useState(null)
@@ -66,13 +71,17 @@ export function FanMap({ layout = 'default' }) {
 
     const { lat, lng } = pendingPin
 
-    await submitFanSignup({
+    const { pinId } = await submitFanSignup({
       firstName,
       lastName,
       email,
       phone: phone ?? null,
       place: pendingPin,
     })
+
+    if (pinId) {
+      setPreferPinIds((prev) => (prev.includes(pinId) ? prev : [...prev, pinId]))
+    }
 
     const nextCount = Math.min(pinDropCount + 1, MAX_PINS_PER_BROWSER)
     try {

@@ -1,4 +1,4 @@
-/** @typedef {{ id: string, city: string, country: string, lat: number, lng: number }} PinRecord */
+/** @typedef {{ id: string, city: string, country: string, lat: number, lng: number, createdAt?: number | null }} PinRecord */
 
 /** @typedef {PinRecord & {
  *   displayLat: number,
@@ -13,6 +13,9 @@
 /** Angular spread radius (~0.14° ≈ 15 km); grows slightly with stack count. */
 const SPREAD_BASE_DEG = 0.14
 
+/** Cap rendered pins per city so dense cities stay performant. All pins are still stored. */
+export const MAX_VISIBLE_PINS_PER_CITY = 5
+
 /**
  * @param {string} city
  * @param {string} country
@@ -22,11 +25,47 @@ function cityStackKey(city, country) {
 }
 
 /**
+ * Prefer recently dropped pins (so a new drop always appears), then newest by createdAt.
+ * @param {PinRecord[]} group
+ * @param {Set<string>} preferIds
+ * @param {number} max
+ * @returns {PinRecord[]}
+ */
+function selectVisiblePinsForCity(group, preferIds, max) {
+  if (group.length <= max) return group
+
+  const preferred = []
+  const rest = []
+  for (const pin of group) {
+    if (preferIds.has(pin.id)) preferred.push(pin)
+    else rest.push(pin)
+  }
+
+  rest.sort((a, b) => {
+    const byTime = (b.createdAt ?? 0) - (a.createdAt ?? 0)
+    if (byTime !== 0) return byTime
+    return String(b.id).localeCompare(String(a.id))
+  })
+
+  const selected = preferred.slice(0, max)
+  for (const pin of rest) {
+    if (selected.length >= max) break
+    selected.push(pin)
+  }
+  return selected
+}
+
+/**
  * Fan pins in the same city/country into a small circle so each stays visible and pickable.
+ * Dense cities are capped at {@link MAX_VISIBLE_PINS_PER_CITY} visible pins.
+ *
  * @param {PinRecord[]} pins
+ * @param {{ preferPinIds?: string[] }} [options]
  * @returns {DisplayPin[]}
  */
-export function spreadPinsForDisplay(pins) {
+export function spreadPinsForDisplay(pins, options = {}) {
+  const preferIds = new Set(options.preferPinIds ?? [])
+
   /** @type {Map<string, PinRecord[]>} */
   const groups = new Map()
 
@@ -40,7 +79,12 @@ export function spreadPinsForDisplay(pins) {
   /** @type {DisplayPin[]} */
   const result = []
 
-  for (const [stackId, group] of groups) {
+  for (const [stackId, fullGroup] of groups) {
+    const group = selectVisiblePinsForCity(
+      fullGroup,
+      preferIds,
+      MAX_VISIBLE_PINS_PER_CITY,
+    )
     const centerLat = group.reduce((s, p) => s + p.lat, 0) / group.length
     const centerLng = group.reduce((s, p) => s + p.lng, 0) / group.length
     const n = group.length

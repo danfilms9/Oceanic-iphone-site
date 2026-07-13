@@ -8,7 +8,7 @@ import {
 import { db } from './firebase.js'
 
 /**
- * @param {(pins: Array<{ id: string, city: string, country: string, lat: number, lng: number }>) => void} callback
+ * @param {(pins: Array<{ id: string, city: string, country: string, lat: number, lng: number, createdAt: number | null }>) => void} callback
  * @returns {() => void} unsubscribe
  */
 export function subscribeToPins(callback) {
@@ -16,12 +16,17 @@ export function subscribeToPins(callback) {
   return onSnapshot(pinsRef, (snapshot) => {
     const pins = snapshot.docs.map((d) => {
       const data = d.data()
+      const createdAt =
+        data.createdAt && typeof data.createdAt.toMillis === 'function'
+          ? data.createdAt.toMillis()
+          : null
       return {
         id: d.id,
         city: data.city,
         country: data.country,
         lat: data.lat,
         lng: data.lng,
+        createdAt,
       }
     })
     callback(pins)
@@ -36,6 +41,7 @@ const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
  *
  * @param {{ city: string, country: string, lat: number, lng: number }} pinData
  * @param {{ firstName: string, lastName: string, email: string, city: string, country: string, phone?: string | null }} subscriberData
+ * @returns {Promise<{ pinId: string }>}
  */
 export async function addPinWithSubscriber(pinData, subscriberData) {
   const email = String(subscriberData.email).trim().toLowerCase()
@@ -69,6 +75,7 @@ export async function addPinWithSubscriber(pinData, subscriberData) {
   })
 
   await batch.commit()
+  return { pinId: pinRef.id }
 }
 
 /**
