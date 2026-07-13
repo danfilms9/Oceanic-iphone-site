@@ -1,6 +1,6 @@
-import { Raycaster, Vector2 } from 'three'
+import { Raycaster, Vector2, Vector3 } from 'three'
 import { getPinDataFromRoot } from '../../lib/spreadPins.js'
-import { FANMAP_PIN_FLAG } from './pinObject.js'
+import { FANMAP_PIN_FLAG, FANMAP_PIN_HEAD_KEY } from './pinObject.js'
 import { findPinRootFromObject, setPinHoverTarget } from './pinHover.js'
 
 /** @typedef {{ city: string, x: number, y: number } | null} FanmapPinTooltip */
@@ -8,20 +8,33 @@ import { findPinRootFromObject, setPinHoverTarget } from './pinHover.js'
 /** Pin label stays up this long after hover/click before fading out. */
 const PIN_LABEL_VISIBLE_MS = 2000
 
+const _headWorld = new Vector3()
+const _headNdc = new Vector3()
+
 /**
+ * Project the pin head's world position into host/canvas pixel coords so the
+ * label stays locked to the head across zoom and lean.
  * @param {import('globe.gl').GlobeInstance} globeInstance
- * @param {{ stackCenterLat: number, stackCenterLng: number, displayLat: number, displayLng: number, stackSize: number }} pinData
+ * @param {import('three').Object3D} root
  * @returns {{ x: number, y: number } | null}
  */
-function getPinTooltipPosition(globeInstance, pinData) {
-  if (typeof globeInstance.getScreenCoords !== 'function') return null
-  const lat =
-    pinData.stackSize > 1 ? pinData.stackCenterLat : pinData.displayLat
-  const lng =
-    pinData.stackSize > 1 ? pinData.stackCenterLng : pinData.displayLng
-  const sc = globeInstance.getScreenCoords(lat, lng, 0.05)
-  if (!sc || !Number.isFinite(sc.x) || !Number.isFinite(sc.y)) return null
-  return { x: sc.x, y: sc.y }
+function getPinTooltipPosition(globeInstance, root) {
+  const head = root?.userData?.[FANMAP_PIN_HEAD_KEY]
+  const camera = globeInstance.camera?.()
+  const canvas = globeInstance.renderer?.()?.domElement
+  if (!head || !camera || !canvas) return null
+
+  head.getWorldPosition(_headWorld)
+  _headNdc.copy(_headWorld).project(camera)
+  // Behind the camera or outside the clip volume.
+  if (!Number.isFinite(_headNdc.x) || !Number.isFinite(_headNdc.y) || _headNdc.z > 1) {
+    return null
+  }
+
+  const x = (_headNdc.x * 0.5 + 0.5) * canvas.clientWidth
+  const y = (-_headNdc.y * 0.5 + 0.5) * canvas.clientHeight
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+  return { x, y }
 }
 
 /**
@@ -31,8 +44,8 @@ function getPinTooltipPosition(globeInstance, pinData) {
  */
 function buildPinTooltip(root, globeInstance) {
   const data = getPinDataFromRoot(root)
-  if (!data?.city) return null
-  const pos = getPinTooltipPosition(globeInstance, data)
+  if (!data?.city || !root) return null
+  const pos = getPinTooltipPosition(globeInstance, root)
   if (!pos) return null
   return { city: String(data.city), x: pos.x, y: pos.y }
 }
@@ -79,12 +92,24 @@ export function attachPinPointerHover(globeInstance, onTooltipChange) {
     onTooltipChange?.(buildPinTooltip(activeRoot, globeInstance))
   }
 
+  /** Traversing the whole scene per pointer event is expensive; cache the pin list briefly. */
+  const PIN_ROOTS_CACHE_MS = 1500
+  /** @type {import('three').Object3D[]} */
+  let cachedPinRoots = []
+  let pinRootsCachedAt = 0
+
   const collectPinRoots = () => {
+    const now = performance.now()
+    if (cachedPinRoots.length && now - pinRootsCachedAt < PIN_ROOTS_CACHE_MS) {
+      return cachedPinRoots
+    }
     /** @type {import('three').Object3D[]} */
     const roots = []
     globeInstance.scene()?.traverse((obj) => {
       if (obj.userData?.[FANMAP_PIN_FLAG]) roots.push(obj)
     })
+    cachedPinRoots = roots
+    pinRootsCachedAt = now
     return roots
   }
 
@@ -120,10 +145,24 @@ export function attachPinPointerHover(globeInstance, onTooltipChange) {
     scheduleHide()
   }
 
-  const onPointerMove = (event) => {
-    const root = pickPinRoot(event.clientX, event.clientY)
+  // Coalesce raycasts to at most one per frame — pointermove can fire far faster than 60/s.
+  let pendingMoveRaf = 0
+  let lastMoveX = 0
+  let lastMoveY = 0
+
+  const runPointerPick = () => {
+    pendingMoveRaf = 0
+    const root = pickPinRoot(lastMoveX, lastMoveY)
     canvas.style.cursor = root ? 'pointer' : ''
     if (root) setActivePin(root)
+  }
+
+  const onPointerMove = (event) => {
+    lastMoveX = event.clientX
+    lastMoveY = event.clientY
+    if (!pendingMoveRaf) {
+      pendingMoveRaf = requestAnimationFrame(runPointerPick)
+    }
   }
 
   const onClick = (event) => {
@@ -150,6 +189,7 @@ export function attachPinPointerHover(globeInstance, onTooltipChange) {
     canvas.removeEventListener('click', onClick)
     canvas.removeEventListener('pointerleave', onPointerLeave)
     controls?.removeEventListener('change', onControlsChange)
+    if (pendingMoveRaf) cancelAnimationFrame(pendingMoveRaf)
     clearHideTimer()
     canvas.style.cursor = ''
     if (activeRoot) setPinHoverTarget(activeRoot, false)

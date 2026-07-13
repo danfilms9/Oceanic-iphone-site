@@ -9,7 +9,7 @@ import {
 const STARFIELD_NAME = 'fanmap-starfield'
 
 /** @param {number} radius Shell radius in scene units (globe.gl uses ~100 for Earth). */
-export function createStarfieldPoints(radius = 620, count = 1500) {
+export function createStarfieldPoints(radius = 620, count = 700) {
   const positions = new Float32Array(count * 3)
   const colors = new Float32Array(count * 3)
   const c = new Color()

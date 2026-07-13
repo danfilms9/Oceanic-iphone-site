@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { IphoneHome } from './IphoneHome';
 import { LockScreen } from './LockScreen';
@@ -517,7 +517,9 @@ function IphoneShellContent() {
                     }} 
                     closeApp={performCloseApp}
                   >
-                    <Component />
+                    <Suspense fallback={null}>
+                      <Component />
+                    </Suspense>
                   </AppNavigationProvider>
                 </div>
               ) : (

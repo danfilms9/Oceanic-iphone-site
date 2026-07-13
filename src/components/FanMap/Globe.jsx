@@ -39,12 +39,35 @@ const LIGHT_THEME_GLOBE_OFFSET = Object.freeze([0, 68])
 const INITIAL_POINT_OF_VIEW = Object.freeze({ lng: -50 })
 
 /** Orbit zoom limits vs globe radius R (three-globe uses R ≈ 100). Tighter than globe.gl defaults (min ~R, max 100R). */
-const ZOOM_MIN_DISTANCE_GLOBE_R = 1.11
+const ZOOM_MIN_DISTANCE_GLOBE_R = 1.06
 const ZOOM_MAX_DISTANCE_GLOBE_R = 6
 
 const AUTO_ROTATE_SPEED = 0.4
+/** Auto-rotate speed at closest zoom — slow so close-up views don't whip past. */
+const AUTO_ROTATE_SPEED_CLOSE = 0.05
 /** Resume auto-rotate this long after the user stops dragging or zooming. */
 const AUTO_ROTATE_RESUME_MS = 3000
+/** How long the rotate speed eases from 0 → full after resume. */
+const AUTO_ROTATE_EASE_MS = 2800
+
+/**
+ * Map camera distance to auto-rotate speed: slower when zoomed in, full speed when zoomed out.
+ * @param {number} cameraDistance
+ * @param {number} globeRadius
+ */
+function computeAutoRotateSpeedFromDistance(cameraDistance, globeRadius) {
+  const minD = globeRadius * ZOOM_MIN_DISTANCE_GLOBE_R
+  const maxD = globeRadius * ZOOM_MAX_DISTANCE_GLOBE_R
+  const span = maxD - minD
+  if (span <= 0) return AUTO_ROTATE_SPEED_CLOSE
+  const t = Math.max(0, Math.min(1, (cameraDistance - minD) / span))
+  // Square so mid/close zooms stay noticeably slower than far orbit.
+  const zoomT = t * t
+  return (
+    AUTO_ROTATE_SPEED_CLOSE +
+    zoomT * (AUTO_ROTATE_SPEED - AUTO_ROTATE_SPEED_CLOSE)
+  )
+}
 
 /** Without a texture, three-globe defaults to black for the sphere — we set ocean color here. */
 const GLOBE_BASE_MATERIAL = {
@@ -84,6 +107,9 @@ export const Globe = forwardRef(function Globe({ pins, theme = 'dark' }, ref) {
   const pinPointerCleanupRef = useRef(null)
   const pinScaleRef = useRef(1)
   const globeRadiusRef = useRef(100)
+  /** 0–1 ease factor for auto-rotate resume; multiplied with zoom-based speed. */
+  const autoRotateEaseFactorRef = useRef(1)
+  const applyAutoRotateSpeedRef = useRef(() => {})
   const [dims, setDims] = useState({ width: 640, height: 480 })
   const [pinTooltip, setPinTooltip] = useState(
     /** @type {{ city: string, x: number, y: number } | null} */ (null),
@@ -134,29 +160,43 @@ export const Globe = forwardRef(function Globe({ pins, theme = 'dark' }, ref) {
         ? inst.getGlobeRadius()
         : globeRadiusRef.current
     globeRadiusRef.current = globeR
+    const distance = controls.getDistance()
     const scale = computePinScaleFromCameraDistance(
-      controls.getDistance(),
+      distance,
       globeR,
       ZOOM_MIN_DISTANCE_GLOBE_R,
       ZOOM_MAX_DISTANCE_GLOBE_R,
     )
+    // Controls fire 'change' every frame during auto-rotate; distance only moves
+    // on zoom, so skip the scene traverse and React update when nothing changed.
+    if (Math.abs(scale - pinScaleRef.current) < 0.001) {
+      applyAutoRotateSpeedRef.current()
+      return
+    }
     pinScaleRef.current = scale
     updateFanmapPinScalesInScene(scene, scale)
-    setTooltipZoomScale(
-      computeTooltipZoomScaleFromCameraDistance(
-        controls.getDistance(),
-        globeR,
-        ZOOM_MIN_DISTANCE_GLOBE_R,
-        ZOOM_MAX_DISTANCE_GLOBE_R,
-      ),
-    )
+    applyAutoRotateSpeedRef.current()
+    // Round so identical values bail out of setState instead of re-rendering.
+    const zoomScale =
+      Math.round(
+        computeTooltipZoomScaleFromCameraDistance(
+          distance,
+          globeR,
+          ZOOM_MIN_DISTANCE_GLOBE_R,
+          ZOOM_MAX_DISTANCE_GLOBE_R,
+        ) * 100,
+      ) / 100
+    setTooltipZoomScale(zoomScale)
   }
 
   const objectThreeObject = useCallback(
-    /** @param {{ city: string, country: string, lat: number, lng: number }} pinData */ (
+    /** @param {{ city: string, country: string, lat: number, lng: number, stackIndex?: number, stackSize?: number }} pinData */ (
       pinData,
     ) => {
-      const pin = createFanmapPinObject()
+      const pin = createFanmapPinObject({
+        stackIndex: pinData.stackIndex,
+        stackSize: pinData.stackSize,
+      })
       pin.userData[FANMAP_PIN_DATA_KEY] = pinData
       setFanmapPinBaseScale(pin, pinScaleRef.current)
       return pin
@@ -284,8 +324,28 @@ export const Globe = forwardRef(function Globe({ pins, theme = 'dark' }, ref) {
             c.minDistance = globeR * ZOOM_MIN_DISTANCE_GLOBE_R
             c.maxDistance = globeR * ZOOM_MAX_DISTANCE_GLOBE_R
             c.autoRotate = true
-            c.autoRotateSpeed = AUTO_ROTATE_SPEED
+            autoRotateEaseFactorRef.current = 1
+
+            const applyAutoRotateSpeed = () => {
+              if (!c.autoRotate) return
+              const zoomSpeed = computeAutoRotateSpeedFromDistance(
+                c.getDistance(),
+                globeRadiusRef.current,
+              )
+              c.autoRotateSpeed = zoomSpeed * autoRotateEaseFactorRef.current
+            }
+            applyAutoRotateSpeedRef.current = applyAutoRotateSpeed
+            applyAutoRotateSpeed()
+
             let autoRotateResumeTimer = 0
+            let autoRotateEaseRaf = 0
+
+            const clearAutoRotateEase = () => {
+              if (autoRotateEaseRaf) {
+                cancelAnimationFrame(autoRotateEaseRaf)
+                autoRotateEaseRaf = 0
+              }
+            }
 
             const clearAutoRotateResumeTimer = () => {
               if (autoRotateResumeTimer) {
@@ -294,16 +354,43 @@ export const Globe = forwardRef(function Globe({ pins, theme = 'dark' }, ref) {
               }
             }
 
+            const easeInAutoRotate = () => {
+              clearAutoRotateEase()
+              c.autoRotate = true
+              autoRotateEaseFactorRef.current = 0
+              applyAutoRotateSpeed()
+              const start = performance.now()
+
+              const tick = (now) => {
+                const t = Math.min(1, (now - start) / AUTO_ROTATE_EASE_MS)
+                // Smooth ease-in (cubic): starts slow, then settles at full speed.
+                autoRotateEaseFactorRef.current = t * t * t
+                applyAutoRotateSpeed()
+                if (t < 1) {
+                  autoRotateEaseRaf = requestAnimationFrame(tick)
+                } else {
+                  autoRotateEaseRaf = 0
+                  autoRotateEaseFactorRef.current = 1
+                  applyAutoRotateSpeed()
+                }
+              }
+
+              autoRotateEaseRaf = requestAnimationFrame(tick)
+            }
+
             const pauseRotate = () => {
-              c.autoRotate = false
+              clearAutoRotateEase()
               clearAutoRotateResumeTimer()
+              c.autoRotate = false
+              autoRotateEaseFactorRef.current = 1
             }
 
             const scheduleResumeRotate = () => {
               clearAutoRotateResumeTimer()
+              clearAutoRotateEase()
               autoRotateResumeTimer = window.setTimeout(() => {
                 autoRotateResumeTimer = 0
-                c.autoRotate = true
+                easeInAutoRotate()
               }, AUTO_ROTATE_RESUME_MS)
             }
 
@@ -312,6 +399,8 @@ export const Globe = forwardRef(function Globe({ pins, theme = 'dark' }, ref) {
             c.addEventListener('change', syncPinScalesFromCamera)
             controlsCleanupRef.current = () => {
               clearAutoRotateResumeTimer()
+              clearAutoRotateEase()
+              applyAutoRotateSpeedRef.current = () => {}
               c.removeEventListener('start', pauseRotate)
               c.removeEventListener('end', scheduleResumeRotate)
               c.removeEventListener('change', syncPinScalesFromCamera)
@@ -341,7 +430,7 @@ export const Globe = forwardRef(function Globe({ pins, theme = 'dark' }, ref) {
           style={{
             left: pinTooltip.x,
             top: pinTooltip.y,
-            transform: `translate(-50%, calc(-100% - ${TOOLTIP_OFFSET_PX * tooltipZoomScale}px)) scale(${tooltipZoomScale})`,
+            transform: `translate(-50%, calc(-100% - ${TOOLTIP_OFFSET_PX}px)) scale(${tooltipZoomScale})`,
           }}
         >
           {pinTooltip.city}

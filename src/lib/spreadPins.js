@@ -10,11 +10,15 @@
  *   stackCenterLng: number,
  * }} DisplayPin */
 
-/** Angular spread radius (~0.14° ≈ 15 km); grows slightly with stack count. */
-const SPREAD_BASE_DEG = 0.14
+/**
+ * Tip cluster radius on the globe. Kept small so stacked pins look stuck in one spot;
+ * head separation comes from lean angles on the 3D pin meshes.
+ * (~0.022° ≈ 2.4 km)
+ */
+const SPREAD_BASE_DEG = 0.022
 
 /** Cap rendered pins per city so dense cities stay performant. All pins are still stored. */
-export const MAX_VISIBLE_PINS_PER_CITY = 5
+export const MAX_VISIBLE_PINS_PER_CITY = 4
 
 /**
  * @param {string} city
@@ -88,8 +92,9 @@ export function spreadPinsForDisplay(pins, options = {}) {
     const centerLat = group.reduce((s, p) => s + p.lat, 0) / group.length
     const centerLng = group.reduce((s, p) => s + p.lng, 0) / group.length
     const n = group.length
+    // Tiny tip offsets only — enough to avoid z-fighting; lean handles head clearance.
     const radius =
-      n === 1 ? 0 : SPREAD_BASE_DEG * Math.min(2.2, 0.85 + n * 0.18)
+      n === 1 ? 0 : SPREAD_BASE_DEG * Math.min(1.35, 0.75 + n * 0.08)
     const lngScale = Math.cos((centerLat * Math.PI) / 180) || 1e-6
 
     group.forEach((pin, i) => {

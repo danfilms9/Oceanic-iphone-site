@@ -1,3 +1,4 @@
+import { Color } from 'three'
 import {
   applyFanmapPinTransform,
   capturePinMaterialRestState,
@@ -8,6 +9,9 @@ import {
 const SPRING_STIFFNESS = 220
 const SPRING_DAMPING = 16
 const HIGHLIGHT_EMISSIVE = 0.42
+
+/** Scratch color reused across highlight updates to avoid per-frame allocation. */
+const _highlightColor = new Color()
 
 /** @type {Map<import('three').Object3D, { value: number, velocity: number, target: number }>} */
 const springs = new Map()
@@ -22,9 +26,10 @@ function updatePinHighlight(root, hoverT) {
     capturePinMaterialRestState(mat)
     mat.emissive.setHex(mat.userData.fanmapRestEmissive ?? 0)
     if (hoverT > 0) {
-      mat.emissive.add(
-        mat.color.clone().multiplyScalar(hoverT * HIGHLIGHT_EMISSIVE),
-      )
+      _highlightColor
+        .copy(mat.color)
+        .multiplyScalar(hoverT * HIGHLIGHT_EMISSIVE)
+      mat.emissive.add(_highlightColor)
     }
   })
 }

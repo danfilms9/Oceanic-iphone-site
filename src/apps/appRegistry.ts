@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import { lazy, type ComponentType } from 'react';
 import { NotesPlaceholder } from '../components/Iphone/NotesPlaceholder';
 import { CalendarPlaceholder } from '../components/Iphone/CalendarPlaceholder';
 import { MerchPlaceholder } from '../components/Iphone/MerchPlaceholder';
@@ -8,8 +8,15 @@ import { CareMorePlaceholder } from '../components/Iphone/CareMorePlaceholder';
 import { YoutubePlaceholder } from '../components/Iphone/YoutubePlaceholder';
 import { SettingsPlaceholder } from '../components/Iphone/SettingsPlaceholder';
 import { MusicPlaceholder } from '../components/Iphone/MusicPlaceholder';
-import { VisualizerApp } from '../components/VisualizerApp';
-import { MapsPlaceholder } from '../components/Iphone/MapsPlaceholder';
+
+// Lazy-load the two Three.js-heavy apps so the globe/visualizer bundles
+// download only when the app is opened, not on initial page load.
+const VisualizerApp = lazy(() =>
+  import('../components/VisualizerApp').then((m) => ({ default: m.VisualizerApp })),
+);
+const MapsPlaceholder = lazy(() =>
+  import('../components/Iphone/MapsPlaceholder').then((m) => ({ default: m.MapsPlaceholder })),
+);
 
 /**
  * App definitions for the iPhone home screen.

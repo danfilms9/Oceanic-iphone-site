@@ -16,20 +16,22 @@ const PIN_SILVER = 0xc0c0c8
 export const FANMAP_PIN_FLAG = 'fanmapPin'
 export const FANMAP_PIN_RING_PART = 'fanmapPinRing'
 export const FANMAP_PIN_HOVER_GROUP_KEY = 'fanmapPinHoverGroup'
+/** Mesh used as the screen-space anchor for the city label. */
+export const FANMAP_PIN_HEAD_KEY = 'fanmapPinHead'
 /** Pin record from spreadPins / Firestore (stored on Three root). */
 export const FANMAP_PIN_DATA_KEY = 'fanmapPinData'
 
 /** Base size multiplier before zoom-based scaling. */
 export const PIN_BASE_SCALE = 1.4
 
-/** Zoom scale range (multiplied with PIN_BASE_SCALE). */
-export const PIN_SCALE_MIN = 0.55
+/** Zoom scale range (multiplied with PIN_BASE_SCALE). Smaller at close zoom so heads/stems thin out. */
+export const PIN_SCALE_MIN = 0.18
 export const PIN_SCALE_MAX = 4.2
 
 /** City label scale at max zoom out (far camera). */
 export const TOOLTIP_ZOOM_SCALE_MIN = 0.92
 /** City label scale at max zoom in (close camera). */
-export const TOOLTIP_ZOOM_SCALE_MAX = 1.5
+export const TOOLTIP_ZOOM_SCALE_MAX = 1.12
 
 /** Scale multiplier when pin hover spring reaches 1. */
 export const PIN_HOVER_SCALE_MULT = 1.38
@@ -123,11 +125,70 @@ export function updateFanmapPinScalesInScene(scene, scale) {
   })
 }
 
+/** Base lean for stacked pins (~12°); heads fan out while tips stay clustered. */
+const STACK_LEAN_RAD = 0.21
+
+/**
+ * Outward lean so stacked pin heads clear each other.
+ * @param {number} [stackIndex]
+ * @param {number} [stackSize]
+ * @returns {{ leanAngle: number, leanDirection: number }}
+ */
+export function leanForStack(stackIndex = 0, stackSize = 1) {
+  if (stackSize <= 1) return { leanAngle: 0, leanDirection: 0 }
+  const leanDirection = (2 * Math.PI * stackIndex) / stackSize - Math.PI / 2
+  const leanAngle =
+    STACK_LEAN_RAD * Math.min(1.12, 0.92 + stackSize * 0.04)
+  return { leanAngle, leanDirection }
+}
+
+const HEAD_RADIUS = 0.42
+const STEM_HEIGHT = 2.35
+const RING_Z = 0.04
+
+/**
+ * Geometries and static materials shared by every pin — allocated once.
+ * Stem/head materials stay per-pin because hover mutates their emissive color.
+ * @type {{ ring: RingGeometry, stem: CylinderGeometry, head: SphereGeometry, hit: SphereGeometry, ringMat: MeshPhongMaterial, hitMat: MeshBasicMaterial } | null}
+ */
+let sharedPinAssets = null
+
+function getSharedPinAssets() {
+  if (!sharedPinAssets) {
+    sharedPinAssets = {
+      ring: new RingGeometry(0.4, 0.68, 24),
+      stem: new CylinderGeometry(0.095, 0.13, STEM_HEIGHT, 8),
+      head: new SphereGeometry(HEAD_RADIUS, 12, 12),
+      hit: new SphereGeometry(0.98, 6, 6),
+      ringMat: new MeshPhongMaterial({
+        color: PIN_WHITE,
+        side: DoubleSide,
+        shininess: 35,
+      }),
+      hitMat: new MeshBasicMaterial({
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      }),
+    }
+  }
+  return sharedPinAssets
+}
+
 /**
  * 3D map pin for globe.gl `objectsData` — white base ring, red stem, red head.
  * Local +Z is radial outward (with objectFacesSurface).
+ * Stacked pins lean outward so heads don't intersect while tips stay close.
+ *
+ * @param {{ stackIndex?: number, stackSize?: number }} [options]
  */
-export function createFanmapPinObject() {
+export function createFanmapPinObject(options = {}) {
+  const { leanAngle, leanDirection } = leanForStack(
+    options.stackIndex,
+    options.stackSize,
+  )
+  const assets = getSharedPinAssets()
+
   const root = new Group()
   root.userData[FANMAP_PIN_FLAG] = true
 
@@ -142,53 +203,43 @@ export function createFanmapPinObject() {
     specular: 0xffffff,
   })
 
-  const ringZ = 0.04
-
-  const ring = new Mesh(
-    new RingGeometry(0.4, 0.68, 40),
-    new MeshPhongMaterial({
-      color: PIN_WHITE,
-      side: DoubleSide,
-      shininess: 35,
-    }),
-  )
-  ring.position.z = ringZ
+  const ring = new Mesh(assets.ring, assets.ringMat)
+  ring.position.z = RING_Z
   ring.userData[FANMAP_PIN_RING_PART] = true
 
-  const headRadius = 0.42
-  const stemHeight = 2.35
-  const stem = new Mesh(
-    new CylinderGeometry(0.095, 0.13, stemHeight, 14),
-    silverMat,
-  )
+  const stem = new Mesh(assets.stem, silverMat)
   // CylinderGeometry is Y-aligned; with objectFacesSurface, +Z is radial outward.
   stem.rotation.x = Math.PI / 2
+
+  // Pivot at the tip so the stem/head lean while the white ring stays on the surface.
+  const leanGroup = new Group()
+  leanGroup.position.z = RING_Z
+  if (leanAngle > 0) {
+    leanGroup.rotation.x = Math.sin(leanDirection) * leanAngle
+    leanGroup.rotation.y = -Math.cos(leanDirection) * leanAngle
+  }
+
   const hoverParts = new Group()
-  hoverParts.position.z = ringZ
   root.userData[FANMAP_PIN_HOVER_GROUP_KEY] = hoverParts
 
-  stem.position.z = stemHeight / 2
+  stem.position.z = STEM_HEIGHT / 2
 
-  const head = new Mesh(new SphereGeometry(headRadius, 20, 20), redMat)
-  head.position.z = stemHeight + headRadius * 0.82
+  const head = new Mesh(assets.head, redMat)
+  head.position.z = STEM_HEIGHT + HEAD_RADIUS * 0.82
+  root.userData[FANMAP_PIN_HEAD_KEY] = head
 
   hoverParts.add(stem)
   hoverParts.add(head)
 
-  const pinTipZ = ringZ + stemHeight + headRadius * 0.82
-  const hitZone = new Mesh(
-    new SphereGeometry(0.98, 12, 12),
-    new MeshBasicMaterial({
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-    }),
-  )
-  hitZone.position.z = pinTipZ * 0.5
+  const pinLength = STEM_HEIGHT + HEAD_RADIUS * 0.82
+  const hitZone = new Mesh(assets.hit, assets.hitMat)
+  hitZone.position.z = pinLength * 0.5
+
+  leanGroup.add(hoverParts)
+  leanGroup.add(hitZone)
 
   root.add(ring)
-  root.add(hoverParts)
-  root.add(hitZone)
+  root.add(leanGroup)
 
   for (const part of [stem, head]) {
     capturePinMaterialRestState(part.material)
