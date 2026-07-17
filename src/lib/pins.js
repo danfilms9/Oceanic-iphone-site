@@ -36,11 +36,28 @@ export function subscribeToPins(callback) {
 const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
 /**
+ * @typedef {{ smsConsent: boolean, smsConsentAt: string, smsConsentSource: string, smsConsentText: string }} SmsConsentRecord
+ */
+
+/**
+ * SMS consent fields stored on every subscriber (TCPA proof-of-consent).
+ * @param {SmsConsentRecord | undefined} consent
+ */
+function consentFields(consent) {
+  return {
+    smsConsent: consent?.smsConsent === true,
+    smsConsentAt: consent?.smsConsentAt ?? '',
+    smsConsentSource: consent?.smsConsentSource ?? '',
+    smsConsentText: consent?.smsConsentText ?? '',
+  }
+}
+
+/**
  * Atomic create: pin (public map) + subscriber (private PII) succeed or neither is written.
  * City/country live on the pin for the globe; duplicated on subscriber for admin/export.
  *
  * @param {{ city: string, country: string, lat: number, lng: number }} pinData
- * @param {{ firstName: string, lastName: string, email: string, city: string, country: string, phone?: string | null }} subscriberData
+ * @param {{ firstName: string, lastName: string, email: string, city: string, country: string, phone?: string | null, consent?: SmsConsentRecord }} subscriberData
  * @returns {Promise<{ pinId: string }>}
  */
 export async function addPinWithSubscriber(pinData, subscriberData) {
@@ -72,6 +89,7 @@ export async function addPinWithSubscriber(pinData, subscriberData) {
     country: subscriberData.country,
     createdAt: serverTimestamp(),
     ...(phone ? { phone } : {}),
+    ...consentFields(subscriberData.consent),
   })
 
   await batch.commit()
@@ -81,7 +99,7 @@ export async function addPinWithSubscriber(pinData, subscriberData) {
 /**
  * Mailing-list signup without a map pin (no city / coordinates).
  *
- * @param {{ firstName: string, lastName: string, email: string, city?: string, country?: string, phone?: string | null }} subscriberData
+ * @param {{ firstName: string, lastName: string, email: string, city?: string, country?: string, phone?: string | null, consent?: SmsConsentRecord }} subscriberData
  */
 export async function addSubscriberOnly(subscriberData) {
   const email = String(subscriberData.email).trim().toLowerCase()
@@ -103,6 +121,7 @@ export async function addSubscriberOnly(subscriberData) {
     country: String(subscriberData.country ?? '').trim(),
     createdAt: serverTimestamp(),
     ...(phone ? { phone } : {}),
+    ...consentFields(subscriberData.consent),
   })
   await batch.commit()
 }

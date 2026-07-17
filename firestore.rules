@@ -19,7 +19,7 @@ service cloud.firestore {
 
     match /subscribers/{subId} {
       allow read: if false;
-      allow create: if request.resource.data.keys().hasOnly(['firstName','lastName','email','city','country','phone','createdAt'])
+      allow create: if request.resource.data.keys().hasOnly(['firstName','lastName','email','city','country','phone','createdAt','smsConsent','smsConsentAt','smsConsentSource','smsConsentText'])
         && request.resource.data.firstName is string
         && request.resource.data.firstName.size() > 0
         && request.resource.data.firstName.size() < 100
@@ -32,7 +32,15 @@ service cloud.firestore {
         && request.resource.data.city is string
         && request.resource.data.country is string
         && (!('phone' in request.resource.data)
-          || (request.resource.data.phone is string && request.resource.data.phone.size() < 64));
+          || (request.resource.data.phone is string && request.resource.data.phone.size() < 64))
+        && (!('smsConsent' in request.resource.data)
+          || request.resource.data.smsConsent is bool)
+        && (!('smsConsentAt' in request.resource.data)
+          || (request.resource.data.smsConsentAt is string && request.resource.data.smsConsentAt.size() < 64))
+        && (!('smsConsentSource' in request.resource.data)
+          || (request.resource.data.smsConsentSource is string && request.resource.data.smsConsentSource.size() < 500))
+        && (!('smsConsentText' in request.resource.data)
+          || (request.resource.data.smsConsentText is string && request.resource.data.smsConsentText.size() < 1000));
       allow update, delete: if false;
     }
   }

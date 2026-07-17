@@ -1,13 +1,16 @@
 import { useState } from 'react'
+import { SmsConsentField } from '../SmsConsentField'
 
 const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
-/** @param {{ open: boolean, onCancel: () => void, onSubmitPayload: (payload: { firstName: string, lastName: string, email: string, phone?: string }) => Promise<void> }} props */
+/** @param {{ open: boolean, onCancel: () => void, onSubmitPayload: (payload: { firstName: string, lastName: string, email: string, phone?: string, smsConsent: boolean }) => Promise<void> }} props */
 export function SubscriberModal({ open, onCancel, onSubmitPayload }) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  // SMS opt-in must start unchecked (TCPA) — never pre-check this.
+  const [smsConsent, setSmsConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -38,6 +41,7 @@ export function SubscriberModal({ open, onCancel, onSubmitPayload }) {
         lastName: trimmedLast,
         email: trimmedEmail,
         ...(trimmedPhone ? { phone: trimmedPhone } : {}),
+        smsConsent: Boolean(trimmedPhone) && smsConsent,
       })
     } catch (err) {
       const message =
@@ -112,6 +116,12 @@ export function SubscriberModal({ open, onCancel, onSubmitPayload }) {
               disabled={submitting}
             />
           </label>
+          <SmsConsentField
+            checked={smsConsent}
+            onChange={setSmsConsent}
+            disabled={submitting}
+            theme="dark"
+          />
         </div>
         {error && (
           <p className="fanmap-modal__error" role="alert">

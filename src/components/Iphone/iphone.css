@@ -6100,6 +6100,26 @@ a.iphone-settings-option {
   vertical-align: middle;
 }
 
+/* SMS opt-in row — scaled up to match the iPhone mockup's px sizing */
+.iphone-mail-sms-consent {
+  min-height: 0;
+}
+
+.iphone-mail-sms-consent .sms-consent {
+  gap: 14px;
+}
+
+.iphone-mail-sms-consent .sms-consent__checkbox {
+  width: 26px;
+  height: 26px;
+  margin-top: 3px;
+}
+
+.iphone-mail-sms-consent .sms-consent__text {
+  font-size: 17px;
+  line-height: 1.4;
+}
+
 .iphone-mail-submit-button {
   width: 90%;
   height: 88px;

@@ -238,7 +238,17 @@ app.post('/api/notion/email-entries', async (req, res) => {
       return res.status(500).json({ error: 'NOTION_EMAIL_DATABASE_ID not configured' });
     }
 
-    const { firstName, lastName, email, city, phone } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      city,
+      phone,
+      smsConsent,
+      smsConsentAt,
+      smsConsentSource,
+      smsConsentText,
+    } = req.body;
 
     if (!firstName || !lastName || !email) {
       return res.status(400).json({ 
@@ -256,6 +266,46 @@ app.post('/api/notion/email-entries', async (req, res) => {
 
     const cityValue = city && String(city).trim() ? String(city).trim() : '';
     const phoneValue = phone && String(phone).trim() ? String(phone).trim() : '';
+
+    // Submitter IP is part of the TCPA proof-of-consent record.
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const ipAddress = (
+      (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor || '')
+        .split(',')[0]
+        .trim()
+    ) || req.socket?.remoteAddress || '';
+
+    const consentProperties = {
+      'SMS Consent': { checkbox: smsConsent === true },
+      ...(smsConsentAt
+        ? {
+            'SMS Consent At': {
+              rich_text: [{ text: { content: String(smsConsentAt).slice(0, 100) } }],
+            },
+          }
+        : {}),
+      ...(smsConsentSource
+        ? {
+            'SMS Consent Source': {
+              rich_text: [{ text: { content: String(smsConsentSource).slice(0, 2000) } }],
+            },
+          }
+        : {}),
+      ...(smsConsentText
+        ? {
+            'SMS Consent Text': {
+              rich_text: [{ text: { content: String(smsConsentText).slice(0, 2000) } }],
+            },
+          }
+        : {}),
+      ...(ipAddress
+        ? {
+            'IP Address': {
+              rich_text: [{ text: { content: String(ipAddress).slice(0, 100) } }],
+            },
+          }
+        : {}),
+    };
 
     const baseProperties = {
       'First Name': {
@@ -290,19 +340,31 @@ app.post('/api/notion/email-entries', async (req, res) => {
         : {}),
     };
 
+    // Consent columns first; retry without them if the database lacks them,
+    // then retry City as select for legacy databases.
+    const attempts = [
+      { ...baseProperties, ...consentProperties },
+      baseProperties,
+      ...(cityValue
+        ? [{ ...selectCityProperties, ...consentProperties }, selectCityProperties]
+        : []),
+    ];
+
     let response;
-    try {
-      response = await notion.pages.create({
-        parent: { database_id: databaseId },
-        properties: baseProperties,
-      });
-    } catch (firstError) {
-      if (firstError?.code !== 'validation_error' || !cityValue) throw firstError;
-      response = await notion.pages.create({
-        parent: { database_id: databaseId },
-        properties: selectCityProperties,
-      });
+    let lastError;
+    for (const properties of attempts) {
+      try {
+        response = await notion.pages.create({
+          parent: { database_id: databaseId },
+          properties,
+        });
+        break;
+      } catch (error) {
+        lastError = error;
+        if (error?.code !== 'validation_error') throw error;
+      }
     }
+    if (!response) throw lastError;
 
     res.json({ success: true, id: response.id });
   } catch (error) {

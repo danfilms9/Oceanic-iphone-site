@@ -1,0 +1,43 @@
+.sms-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sms-consent__checkbox {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  margin: 0.1rem 0 0;
+  accent-color: #007aff;
+  cursor: pointer;
+}
+
+.sms-consent__checkbox:disabled {
+  cursor: not-allowed;
+}
+
+.sms-consent__text {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.sms-consent--dark .sms-consent__text {
+  color: #9a9a9a;
+}
+
+.sms-consent--light .sms-consent__text {
+  color: #6d6d72;
+}
+
+.sms-consent__link {
+  color: #007aff;
+  text-decoration: underline;
+}
+
+.sms-consent--dark .sms-consent__link {
+  color: #78aaff;
+}

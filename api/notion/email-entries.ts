@@ -30,7 +30,17 @@ export default async function handler(
       });
     }
 
-    const { firstName, lastName, email, city, phone } = req.body ?? {};
+    const {
+      firstName,
+      lastName,
+      email,
+      city,
+      phone,
+      smsConsent,
+      smsConsentAt,
+      smsConsentSource,
+      smsConsentText,
+    } = req.body ?? {};
 
     if (!firstName || !lastName || !email) {
       return res.status(400).json({
@@ -43,6 +53,14 @@ export default async function handler(
 
     const notion = new Client({ auth: notionApiKey });
 
+    // Submitter IP is part of the TCPA proof-of-consent record.
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const ipAddress = (
+      Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor ?? ''
+    )
+      .split(',')[0]
+      .trim() || req.socket?.remoteAddress || '';
+
     const response = await createEmailEntryPage(
       notion,
       databaseId,
@@ -51,6 +69,13 @@ export default async function handler(
       String(email).trim(),
       city ? String(city).trim() : undefined,
       phone ? String(phone).trim() : undefined,
+      {
+        smsConsent: smsConsent === true,
+        smsConsentAt: smsConsentAt ? String(smsConsentAt) : undefined,
+        smsConsentSource: smsConsentSource ? String(smsConsentSource) : undefined,
+        smsConsentText: smsConsentText ? String(smsConsentText) : undefined,
+        ipAddress: ipAddress || undefined,
+      },
     );
 
     res.setHeader('Access-Control-Allow-Origin', '*');

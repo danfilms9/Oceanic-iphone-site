@@ -3,6 +3,7 @@ import { TitleBar } from './TitleBar';
 import { BottomBar } from './BottomBar';
 import { CityAutocomplete } from '../FanMap/CityAutocomplete.jsx';
 import { submitFanSignup } from '../../lib/fanSignup.js';
+import { SmsConsentField } from '../SmsConsentField';
 import '@geoapify/geocoder-autocomplete/styles/minimal.css';
 
 export function MailPlaceholder() {
@@ -16,6 +17,8 @@ export function MailPlaceholder() {
   } | null>(null);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  // SMS opt-in must start unchecked (TCPA) — never pre-check this.
+  const [smsConsent, setSmsConsent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -42,6 +45,8 @@ export function MailPlaceholder() {
         email: email.trim(),
         phone: trimmedPhone || null,
         place: selectedPlace,
+        smsConsent: Boolean(trimmedPhone) && smsConsent,
+        formId: 'email-list-app',
       });
       setSubmitStatus('success');
       setFirstName('');
@@ -50,6 +55,7 @@ export function MailPlaceholder() {
       setCityAutocompleteKey((k) => k + 1);
       setEmail('');
       setPhone('');
+      setSmsConsent(false);
       setTimeout(() => {
         setSubmitStatus('idle');
         setErrorMessage('');
@@ -127,6 +133,14 @@ export function MailPlaceholder() {
                 disabled={isSubmitting}
                 autoComplete="tel"
                 maxLength={32}
+              />
+            </div>
+            <div className="iphone-settings-option iphone-settings-option-middle-three iphone-mail-form-field iphone-mail-sms-consent">
+              <SmsConsentField
+                checked={smsConsent}
+                onChange={setSmsConsent}
+                disabled={isSubmitting}
+                theme="light"
               />
             </div>
             <div

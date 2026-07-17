@@ -591,6 +591,14 @@
   color: #c0392b;
 }
 
+.fanmap-root--music .sms-consent__text {
+  color: #6d6d72;
+}
+
+.fanmap-root--music .sms-consent__link {
+  color: #007aff;
+}
+
 .fanmap-root--music .fanmap-modal__skip {
   color: #007aff;
 }

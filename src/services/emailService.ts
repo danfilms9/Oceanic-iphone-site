@@ -8,6 +8,11 @@ export interface EmailEntry {
   email: string;
   city?: string;
   phone?: string;
+  /** TCPA proof-of-consent record; IP is captured server-side. */
+  smsConsent?: boolean;
+  smsConsentAt?: string;
+  smsConsentSource?: string;
+  smsConsentText?: string;
 }
 
 /**

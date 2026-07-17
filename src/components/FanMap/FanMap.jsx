@@ -66,7 +66,7 @@ export function FanMap({ layout = 'default' }) {
     setPendingPin(null)
   }
 
-  const handleSubscriberSubmit = async ({ firstName, lastName, email, phone }) => {
+  const handleSubscriberSubmit = async ({ firstName, lastName, email, phone, smsConsent }) => {
     if (!pendingPin) throw new Error('Missing place')
 
     const { lat, lng } = pendingPin
@@ -77,6 +77,8 @@ export function FanMap({ layout = 'default' }) {
       email,
       phone: phone ?? null,
       place: pendingPin,
+      smsConsent: smsConsent === true,
+      formId: 'fan-map-pin-modal',
     })
 
     if (pinId) {
